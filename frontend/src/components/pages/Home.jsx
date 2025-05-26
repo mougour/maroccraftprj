@@ -370,7 +370,7 @@ const Home = () => {
 
   // Set page title
   useEffect(() => {
-    document.title = "Home - Rarely";
+    document.title = "Home - MAROCRAFT";
   }, []);
 
   // Fetch favorites for the logged-in user.

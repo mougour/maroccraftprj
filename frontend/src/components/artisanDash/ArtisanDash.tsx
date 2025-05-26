@@ -30,7 +30,7 @@ const Dashboard = () => {
   const token = sessionStorage.getItem('token');
 
   useEffect(() => {
-    document.title = 'Dashboard - Rarely';
+    document.title = 'Artisan Dashboard';
   }, []);
 
   // Fetch stats for the artisan
@@ -172,8 +172,10 @@ const Dashboard = () => {
         {/* Header with Search and Filter Dropdown */}
         <div className="mb-8">
           <div className="flex flex-col space-y-4 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Welcome Back, Artisan!</h1>
+            <div className="w-full flex flex-col items-center text-center">
+              <h1 className="text-4xl font-extrabold text-gray-900 tracking-tight mb-1 drop-shadow-sm" style={{letterSpacing: '1px'}}>
+                Welcome Back, {user.name ? user.name : 'Artisan'}!
+              </h1>
               <p className="mt-2 text-gray-600">Here's a quick overview of your performance today.</p>
             </div>
             <div className="flex items-center space-x-4">

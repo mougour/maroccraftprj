@@ -34,7 +34,7 @@ const collections = [
 
 const Collections = () => {
   useEffect(() => {
-    document.title = 'Collections - Rarely';
+    document.title = 'Collections - MAROCRAFT';
   }, []);
   return (
     <Container maxWidth="lg">

@@ -157,7 +157,7 @@ const UserDash = () => {
   const user = JSON.parse(sessionStorage.getItem('user'));
 
   useEffect(() => {
-    document.title = 'My Products - Rarely';
+    document.title = 'My Products - MAROCAFT';
   }, []);
 
   // ---------------------------

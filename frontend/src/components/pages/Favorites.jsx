@@ -23,7 +23,7 @@ import axios from 'axios';
 
 const Favorites = () => {
   useEffect(() => {
-    document.title = 'Favorites - Rarely';
+    document.title = 'Favorites - MAROCRAFT';
   }, []);
   const [favoriteDocs, setFavoriteDocs] = useState([]); // an array of favorite documents
   const [activeTab, setActiveTab] = useState(0);

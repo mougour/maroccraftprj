@@ -38,7 +38,7 @@ userRouter.get("/verify-email/:token", async (req, res) => {
       return res.status(400).json({ error: "Invalid token" });
     }
     if (user.isVerified) {
-      return res.redirect("https://rarely-frontend.onrender.com/login?msg=Email+already+verified");
+      return res.redirect("http://localhost:5174/login?msg=Email+already+verified");
     }
     user.isVerified = true;
     await user.save();
@@ -70,6 +70,7 @@ userRouter.post("/upload", upload.single("image"), async (req, res) => {
 // ------------------
 userRouter.post("/", async (req, res) => {
   try {
+    console.log("Registration request body:", req.body);
     const { error } = validateData(req.body);
     if (error) {
       return res.status(400).json({ error: error.details[0].message });
@@ -89,80 +90,21 @@ userRouter.post("/", async (req, res) => {
       isAdmin: req.body.isAdmin || false,
       role: req.body.role || "user",
       profilePicture: req.body.profilePicture || "./default.png",
-      isVerified: false,
+      isVerified: true,
     });
     const savedUser = await newUser.save();
 
+    // Workaround: forcibly update isVerified to true after save
+    await User.findByIdAndUpdate(savedUser._id, { isVerified: true });
+
+    // Reload the user after update
+    const updatedUser = await User.findById(savedUser._id);
+
     // Generate a JWT token valid for 1 day (for email verification)
-    const token = jwt.sign({ userId: savedUser._id }, process.env.JWT_SECRET, { expiresIn: "1d" });
-    const encodedToken = encodeURIComponent(token);
-    // Construct verification link
-    const verificationUrl = `http://localhost:5000/api/register/verify-email/${encodedToken}`;
-
-    // Send verification email
-    const mailOptions = {
-      from: process.env.EMAIL_USER,
-      to: savedUser.email,
-      subject: "Please verify your email",
-      html: `
-        <html>
-          <head>
-            <meta charset="UTF-8">
-            <title>Verify Your Email</title>
-            <style>
-              .container {
-                max-width: 600px;
-                margin: 0 auto;
-                padding: 20px;
-                border: 1px solid #eaeaea;
-                font-family: Arial, sans-serif;
-                background-color: #fafafa;
-                color: #333;
-              }
-              .header {
-                text-align: center;
-                padding-bottom: 20px;
-              }
-              .btn {
-                background-color: #28a745;
-                color: #ffffff;
-                text-decoration: none;
-                padding: 12px 20px;
-                border-radius: 4px;
-                display: inline-block;
-                margin: 20px 0;
-              }
-              .footer {
-                font-size: 0.9em;
-                color: #777;
-                text-align: center;
-                margin-top: 30px;
-              }
-            </style>
-          </head>
-          <body>
-            <div class="container">
-              <div class="header">
-                <h2>Hello ${savedUser.name},</h2>
-              </div>
-              <p>Thank you for registering! Please verify your email by clicking the link below:</p>
-              <p><a href="${verificationUrl}" class="btn">Verify Email</a></p>
-              <p>If the button above doesn't work, copy and paste the following link into your browser:</p>
-              <p><a href="${verificationUrl}">${verificationUrl}</a></p>
-              <div class="footer">
-                <p>This link will expire in 24 hours.</p>
-                <p>Thank you, <br>The Team</p>
-              </div>
-            </div>
-          </body>
-        </html>
-      `,
-    };
-    // await transporter.sendMail(mailOptions);
-
+    // Skipping email verification as user should be verified immediately
     return res.status(201).json({
-      message: "Registration successful! Please check your email to verify your account.",
-      user: savedUser,
+      message: "Registration successful! Your account is verified.",
+      user: updatedUser,
     });
   } catch (error) {
     console.error("Error in registration route:", error);

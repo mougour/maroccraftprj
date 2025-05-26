@@ -54,7 +54,7 @@ const categories = [
 const Products = () => {
   // Set the document title.
   useEffect(() => {
-    document.title = "Shop - Rarely";
+    document.title = "Shop - MAROCRAFT";
   }, []);
 
   const [products, setProducts] = useState([]);

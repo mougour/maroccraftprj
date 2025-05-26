@@ -39,7 +39,7 @@ import { PayPalScriptProvider, PayPalButtons } from '@paypal/react-paypal-js';
 const Cart = () => {
   // Set page title
   useEffect(() => {
-    document.title = 'Cart - Rarely';
+    document.title = 'Cart - MAROCRAFT';
   }, []);
 
   const navigate = useNavigate();

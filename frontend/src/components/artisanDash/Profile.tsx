@@ -6,7 +6,7 @@ import { useUserAuth } from '../../UserAuthContext';
 
 const Profile = () => {
   useEffect(() => {
-    document.title = 'Profile - Rarely';
+    document.title = 'Profile - MAROCRAFT';
   }, []);
 
   const token = sessionStorage.getItem('token');

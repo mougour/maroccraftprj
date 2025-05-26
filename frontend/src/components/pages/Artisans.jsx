@@ -67,7 +67,7 @@ const specialties = ['All', 'Ceramics', 'Woodworking', 'Textile Art', 'Jewelry',
 
 const Artisans = () => {
   useEffect(() => {
-    document.title = 'Artisans - Rarely';
+    document.title = 'Artisans - MAROCRAFT';
   }, []);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSpecialty, setSelectedSpecialty] = useState('All');

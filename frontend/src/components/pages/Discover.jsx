@@ -31,7 +31,7 @@ const categories = [
 
 const Discover = () => {
   useEffect(() => {
-    document.title = 'Discover - Rarely';
+    document.title = 'Discover - MAROCRAFT';
   }, []);
   return (
     <Container maxWidth="lg">

@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { Link, useLocation } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
   User,
@@ -10,142 +10,315 @@ import {
   X,
   LogOut,
   Package,
+  Settings,
+  Bell,
+  ChevronRight,
+  Sun,
+  Moon,
 } from "lucide-react";
-import { Box, useMediaQuery, useTheme } from "@mui/material";
+import {
+  Box,
+  useMediaQuery,
+  useTheme,
+  Typography,
+  Avatar,
+  Badge,
+  Tooltip,
+  Menu as MuiMenu,
+  MenuItem,
+  Divider,
+  IconButton,
+  Button,
+} from "@mui/material";
+import { styled } from "@mui/system";
 
-function ArtisanSidebar() {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const location = useLocation();
+// Constants
+const GRADIENT = "linear-gradient(45deg, #FFD700, #FF8C00)";
+const TRANSITION = "all 0.3s ease";
+const SHADOW = "0 4px 12px rgba(0,0,0,0.08)";
+
+// Styled Components
+const SidebarWrapper = styled(Box)(({ theme, open }) => ({
+  position: "fixed",
+  top: 0,
+  left: 0,
+  height: "100vh",
+  width: 300,
+  backgroundColor: theme.palette.background.default,
+  boxShadow: SHADOW,
+  transform: open ? "translateX(0)" : "translateX(-100%)",
+  transition: TRANSITION,
+  zIndex: 1300,
+  [theme.breakpoints.up("lg")]: {
+    transform: "translateX(0)",
+  },
+}));
+
+const Logo = styled(Link)({
+  textDecoration: "none",
+  display: "block",
+  marginBottom: 16,
+});
+
+const LogoText = styled(Typography)({
+  fontWeight: 900,
+  background: GRADIENT,
+  WebkitBackgroundClip: "text",
+  WebkitTextFillColor: "transparent",
+  fontSize: "1.8rem",
+  letterSpacing: "3px",
+  fontFamily: "Montserrat, sans-serif",
+});
+
+const ProfileBox = styled(Box)(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  gap: theme.spacing(2),
+  padding: theme.spacing(2),
+  backgroundColor: theme.palette.background.paper,
+  borderRadius: "12px",
+  boxShadow: SHADOW,
+  cursor: "pointer",
+}));
+
+const SidebarItem = styled(Link)(({ theme, active }) => ({
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  padding: theme.spacing(1.5, 2),
+  textDecoration: "none",
+  borderRadius: 12,
+  marginBottom: 8,
+  color: active ? "#FF8C00" : theme.palette.text.secondary,
+  fontWeight: active ? 600 : 400,
+  backgroundColor: active ? "#FFF5E0" : "transparent",
+  boxShadow: active ? SHADOW : "none",
+  transition: TRANSITION,
+  "&:hover": {
+    backgroundColor: "#FFF8E7",
+    color: "#FF8C00",
+  },
+}));
+
+const ToggleButton = styled(IconButton)({
+  position: "fixed",
+  top: 16,
+  right: 16,
+  zIndex: 1400,
+  background: GRADIENT,
+  color: "#fff",
+  boxShadow: SHADOW,
+  "@media (min-width: 1024px)": {
+    display: "none",
+  },
+});
+
+const ActionIcon = styled(IconButton)(({ theme }) => ({
+  backgroundColor: theme.palette.grey[100],
+  borderRadius: 12,
+  padding: theme.spacing(1),
+  transition: TRANSITION,
+  "&:hover svg": {
+    color: "#FF8C00",
+  },
+}));
+
+// Main Component
+export default function ArtisanSidebar() {
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [darkMode, setDarkMode] = useState(false);
+  const [profileAnchor, setProfileAnchor] = useState(null);
+  const [notifAnchor, setNotifAnchor] = useState(null);
   const theme = useTheme();
-  // Check if the screen size is below the 'lg' breakpoint (mobile)
   const isMobile = useMediaQuery(theme.breakpoints.down("lg"));
+  const location = useLocation();
+  const navigate = useNavigate();
 
-  // Force the sidebar to be open if it's not mobile
-  useEffect(() => {
-    if (!isMobile) {
-      setIsSidebarOpen(true);
-    }
-  }, [isMobile]);
-
-  let  navItems = [
-    { icon: LayoutDashboard, label: "Dashboard", path: "/artisan-dashboard" },
-    { icon: Package, label: "Products", path: "/my-products" },
-    { icon: User, label: "Profile", path: "/profile" },
-    { icon: Heart, label: "Favorites", path: "/favorites" },
-    { icon: Star, label: "Reviews", path: "/reviews" },
-    { icon: ShoppingBag, label: "Orders", path: "/orders" },
-  ];
-    const user = JSON.parse(sessionStorage.getItem("user"));
-
-  if (user.role === "user") {
-    navItems = navItems.filter(item => item.label !== "Products");
-  }
-
- 
-
-  // Get user info from localStorage
-
-  const handleLogout = () => {
-    sessionStorage.removeItem("user");
-    sessionStorage.removeItem("token");
-    localStorage.removeItem("user");
-    localStorage.removeItem("token");
-
-    window.location.href = "/login";
+  const user = JSON.parse(sessionStorage.getItem("user")) || {
+    name: "Guest User",
+    email: "guest@example.com",
+    profilePicture: "/default.png",
+    role: "guest",
   };
 
+  useEffect(() => {
+    setSidebarOpen(!isMobile);
+  }, [isMobile, location]);
+
+  const navItems = [
+    { icon: LayoutDashboard, label: "Dashboard", path: "/artisan-dashboard", badge: 3 },
+    { icon: Package, label: "Products", path: "/my-products" },
+    { icon: User, label: "Profile", path: "/profile" },
+    { icon: Heart, label: "Favorites", path: "/favorites", badge: 5 },
+    { icon: Star, label: "Reviews", path: "/reviews", badge: 2 },
+    { icon: ShoppingBag, label: "Orders", path: "/orders", badge: 4 },
+  ].filter((item) => !(user.role === "user" && item.label === "Products"));
+
+  const handleLogout = () => {
+    sessionStorage.clear();
+    localStorage.clear();
+    navigate("/login");
+  };
+
+  const renderNavItems = () =>
+    navItems.map(({ icon: Icon, label, path, badge }) => {
+      const isActive = location.pathname === path;
+      return (
+        <SidebarItem key={path} to={path} active={isActive ? 1 : 0}>
+          <Box display="flex" alignItems="center" gap={1}>
+            <Badge badgeContent={badge || 0} color="error">
+              <Icon size={20} />
+            </Badge>
+            <Typography>{label}</Typography>
+          </Box>
+          {isActive && <ChevronRight size={16} />}
+        </SidebarItem>
+      );
+    });
+
   return (
-    <div>
-      {/* Mobile toggle button (only visible on mobile) */}
-      <button
-        onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-        aria-label="Toggle Sidebar"
-        className="lg:hidden fixed top-4 right-4 z-50 bg-[#FFB636] p-2 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-[#FFB636]"
-      >
-        {isSidebarOpen ? <X size={24} /> : <Menu size={24} />}
-      </button>
+    <>
+      <ToggleButton onClick={() => setSidebarOpen(!sidebarOpen)}>
+        {sidebarOpen ? <X /> : <Menu />}
+      </ToggleButton>
 
-      {/* Sidebar */}
-      <div
-        className={`fixed inset-y-0 left-0 transform ${
-          isSidebarOpen ? "translate-x-0" : "-translate-x-full"
-        } lg:translate-x-0 transition-transform duration-300 ease-in-out w-64 bg-white border-r border-gray-200 shadow-lg z-40`}
-      >
-        {/* Header with Logo and User Avatar */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
-          <div className="flex items-center space-x-3">
-            <img
-              src={user.profilePicture ?? "/default.png"}
-              alt="User Avatar"
-              className="w-10 h-10 rounded-full"
-            />
-            <Box
-              component="img"
-              src="/logo.png"
-              alt="logo image"
-              sx={{
-                width: "70%",
-                height: "auto",
-                borderRadius: "50%",
-                cursor: "pointer",
-              }}
-              onClick={() => {
-                window.location.href = "/";
-              }}
-            />
-          </div>
-          {/* Close button for mobile */}
-          <button
-            onClick={() => setIsSidebarOpen(false)}
-            aria-label="Close Sidebar"
-            className="lg:hidden text-gray-600 focus:outline-none focus:ring-2 focus:ring-[#FFB636]"
+      <SidebarWrapper open={sidebarOpen}>
+        <Box p={3}>
+          <Logo to="/">
+            <LogoText variant="h5">MAROCRAFT</LogoText>
+          </Logo>
+
+          <ProfileBox
+            onClick={() => navigate('/profile')}
+            sx={{
+              background: 'linear-gradient(135deg, #fffbe6 0%, #fff 100%)',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+              border: '1px solid #f5e9c6',
+              transition: 'box-shadow 0.2s',
+              '&:hover': {
+                boxShadow: '0 4px 16px rgba(255, 140, 0, 0.10)',
+                cursor: 'pointer',
+              },
+            }}
           >
-            <X size={24} />
-          </button>
-        </div>
+            <Box position="relative" mr={1.5}>
+              <Avatar
+                src={user.profilePicture}
+                sx={{
+                  width: 48,
+                  height: 48,
+                  border: '2.5px solid #FFD700',
+                  boxShadow: '0 2px 8px rgba(255, 215, 0, 0.10)',
+                }}
+              />
+              {/* Online status dot */}
+              <Box
+                position="absolute"
+                bottom={2}
+                right={2}
+                width={12}
+                height={12}
+                bgcolor="#4CAF50"
+                borderRadius="50%"
+                border="2px solid #fff"
+                boxShadow="0 0 0 2px #FFD700"
+              />
+            </Box>
+            <Box flex={1} minWidth={0}>
+              <Typography fontWeight={700} fontSize={16} noWrap sx={{ overflow: 'hidden', textOverflow: 'ellipsis', color: '#222' }}>
+                {user.name}
+              </Typography>
+              <Typography variant="caption" color="text.secondary" noWrap sx={{ fontSize: 13 }}>
+                {user.email}
+              </Typography>
+            </Box>
+            <ChevronRight size={18} color="#FF8C00" />
+          </ProfileBox>
 
-        {/* User Info Section */}
-        <div className="px-6 py-4 border-b border-gray-200">
-          <p className="text-lg font-semibold text-gray-800">
-            Welcome, {user.name}
-          </p>
-          <p className="text-sm text-gray-500">{user.email}</p>
-        </div>
+          <Box mt={2} display="flex" width="100%" justifyContent="space-between">
+            <Tooltip title="Notifications">
+              <ActionIcon onClick={(e) => setNotifAnchor(e.currentTarget)}>
+                <Badge badgeContent={3} color="error">
+                  <Bell size={20} />
+                </Badge>
+              </ActionIcon>
+            </Tooltip>
+            <Tooltip title="Settings">
+              <ActionIcon>
+                <Settings size={20} />
+              </ActionIcon>
+            </Tooltip>
+            <Tooltip title={darkMode ? "Light Mode" : "Dark Mode"}>
+              <ActionIcon onClick={() => setDarkMode(!darkMode)}>
+                {darkMode ? <Sun size={20} /> : <Moon size={20} />}
+              </ActionIcon>
+            </Tooltip>
+          </Box>
 
-        {/* Navigation */}
-        <nav className="mt-4 px-6 flex-1">
-          {navItems.map((item) => {
-            const isActive = location.pathname === item.path;
-            return (
-              <Link
-                key={item.path}
-                to={item.path}
-                className={`group flex items-center px-4 py-3 mb-2 transition-colors duration-200 rounded-lg ${
-                  isActive
-                    ? "bg-[#FFF8E7] text-[#FFB636] font-semibold border-l-4 border-[#FFB636]"
-                    : "text-gray-600 hover:bg-[#FFF8E7] hover:text-[#FFB636]"
-                }`}
-              >
-                <item.icon size={20} className="flex-shrink-0" />
-                <span className="ml-4">{item.label}</span>
-              </Link>
-            );
-          })}
-        </nav>
+          <Box mt={3}>{renderNavItems()}</Box>
+        </Box>
 
-        {/* Footer: Logout Button */}
-        <div className="px-6 py-4 border-t border-gray-200">
-          <button
-            className="w-full flex items-center px-4 py-2 text-gray-600 hover:bg-red-50 hover:text-red-600 transition-colors duration-200 rounded-lg"
+        <Box px={2} pb={0}>
+          <Button
+            fullWidth
+            startIcon={<LogOut />}
             onClick={handleLogout}
+            sx={{
+              justifyContent: "flex-start",
+              color: "text.secondary",
+              "&:hover": {
+                backgroundColor: "error.light",
+                color: "error.main",
+              },
+            }}
           >
-            <LogOut size={20} className="flex-shrink-0" />
-            <span className="ml-4">Logout</span>
-          </button>
-        </div>
-      </div>
-    </div>
+            Logout
+          </Button>
+        </Box>
+      </SidebarWrapper>
+
+      {/* Profile Menu */}
+      <MuiMenu
+        anchorEl={profileAnchor}
+        open={Boolean(profileAnchor)}
+        onClose={() => setProfileAnchor(null)}
+        PaperProps={{ sx: { borderRadius: 2, minWidth: 200 } }}
+      >
+        <MenuItem onClick={() => setProfileAnchor(null)}>
+          <User size={18} style={{ marginRight: 8 }} /> View Profile
+        </MenuItem>
+        <MenuItem onClick={() => setProfileAnchor(null)}>
+          <Settings size={18} style={{ marginRight: 8 }} /> Settings
+        </MenuItem>
+        <Divider />
+        <MenuItem
+          onClick={() => {
+            setProfileAnchor(null);
+            handleLogout();
+          }}
+          sx={{ color: "error.main" }}
+        >
+          <LogOut size={18} style={{ marginRight: 8 }} /> Logout
+        </MenuItem>
+      </MuiMenu>
+
+      {/* Notification Menu */}
+      <MuiMenu
+        anchorEl={notifAnchor}
+        open={Boolean(notifAnchor)}
+        onClose={() => setNotifAnchor(null)}
+        PaperProps={{ sx: { borderRadius: 2, minWidth: 300, maxHeight: 400 } }}
+      >
+        <Box px={2} py={1}>
+          <Typography variant="subtitle1" fontWeight={600}>
+            Notifications
+          </Typography>
+        </Box>
+        <Divider />
+        <MenuItem onClick={() => setNotifAnchor(null)} sx={{ justifyContent: "center" }}>
+          View All Notifications
+        </MenuItem>
+      </MuiMenu>
+    </>
   );
 }
-
-export default ArtisanSidebar;
