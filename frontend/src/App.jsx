@@ -17,7 +17,7 @@ import Discover from "./components/pages/Discover";
 import Home from "./components/pages/Home";
 import Cart from "./components/pages/Cart";
 import Products from './components/pages/Product';
-import { UserAuthProvider } from "./UserAuthContext";
+import { UserAuthProvider, useUserAuth } from "./UserAuthContext";
 import ProductDetail from "./components/pages/ProductDetail";
 import Favorites from "./components/pages/Favorites";
 import ArtisanProfile from "./components/pages/ArtisanProfile";
@@ -33,6 +33,17 @@ import ForgotPassword from "./components/ForgotPassword";
 import ResetPassword from "./components/pages/ResetPassword";
 import { Chatbot } from "./components/Chatbot";
 import Footer from "./components/Footer";
+import CustomerDashboard from "./components/pages/CustomerDashboard";
+import CustomerDashboardLayout from "./scenes/global/CustomerDashboardLayout";
+import { useEffect, useState } from "react";
+import { ShoppingBag, DollarSign, Heart, Star } from "lucide-react";
+import AuthenticatedLayout from "./components/AuthenticatedLayout";
+import UserDashboardLayout from "./components/UserDashboardLayout";
+import CustomerOrders from "./components/pages/CustomerOrders";
+import AddProduct from "./components/artisanDash/AddProduct";
+import EditProduct from "./components/artisanDash/EditProduct";
+import CustomerOrderDetail from "./components/pages/CustomerOrderDetail";
+import Messages from './components/pages/Messages';
 
 /** Private Route Check */
 function PrivateRoute({ children }) {
@@ -110,6 +121,14 @@ function NavbarLayout({ children }) {
 
 /** Main App Content */
 function AppContent() {
+  const { user: authUser } = useUserAuth();
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      // ... fetching logic ...
+    };
+  }, []);
+
   return (
     <Routes>
       {/* Public Routes */}
@@ -128,14 +147,24 @@ function AppContent() {
       <Route path="/artisans" element={<NavbarLayout><Artisans /></NavbarLayout>} />
       <Route path="/cart" element={<NavbarLayout><Cart /></NavbarLayout>} />
       <Route path="/order-confirmation" element={<NavbarLayout><OrderConfirmation /></NavbarLayout>} />
-      <Route path="/favorites" element={<ArtisanDashboardLayout><Favorites /></ArtisanDashboardLayout>} />
-      <Route path="/orders" element={<ArtisanDashboardLayout><Orders /></ArtisanDashboardLayout>} />
+      <Route path="/favorites" element={<UserDashboardLayout><Favorites /></UserDashboardLayout>} />
+      <Route 
+        path="/orders" 
+        element={<UserDashboardLayout>{
+          authUser?.role === 'artisan' ? <Orders /> : <CustomerOrders />
+        }</UserDashboardLayout>}
+      />
+      <Route path="/messages" element={<UserDashboardLayout><Messages /></UserDashboardLayout>} />
+      <Route path="/orders/:orderId" element={<UserDashboardLayout><CustomerOrderDetail /></UserDashboardLayout>} />
       <Route path="/reviews" element={<ArtisanDashboardLayout><Reviews /></ArtisanDashboardLayout>} />
       <Route path="/artisan-dashboard" element={<ArtisanDashboardLayout><ArtisanDash /></ArtisanDashboardLayout>} />
-      <Route path="/profile" element={<ArtisanDashboardLayout><Profile /></ArtisanDashboardLayout>} />
+      <Route path="/profile" element={<UserDashboardLayout><Profile /></UserDashboardLayout>} />
       <Route path="/artisans/:id" element={<NavbarLayout><ArtisanProfile /></NavbarLayout>} />
       <Route path="/products/:id" element={<NavbarLayout><ProductDetail /></NavbarLayout>} />
       <Route path="/my-products" element={<ArtisanDashboardLayout><UserDash /></ArtisanDashboardLayout>} />
+      <Route path="/customer-dash" element={<CustomerDashboardLayout><CustomerDashboard /></CustomerDashboardLayout>} />
+      <Route path="/artisan/add-product" element={<ArtisanDashboardLayout><AddProduct /></ArtisanDashboardLayout>} />
+      <Route path="/artisan/products/edit/:id" element={<ArtisanDashboardLayout><EditProduct /></ArtisanDashboardLayout>} />
       {/* Private Routes (Dashboard) */}
       <Route path="/dashboard" element={<PrivateRoute><DashboardLayout><Dashboard /></DashboardLayout></PrivateRoute>} />
       <Route path="/products" element={<PrivateRoute><DashboardLayout><ProductTable /></DashboardLayout></PrivateRoute>} />

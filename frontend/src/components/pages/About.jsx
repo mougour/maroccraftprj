@@ -1,7 +1,6 @@
 import { Container, Grid, Typography, Box, Button, Card, CardContent } from '@mui/material';
 import { ArrowRight, CheckCircle } from 'lucide-react';
 import { useEffect } from 'react';
-import Footer from '../Footer';
 
 const About = () => {
   useEffect(() => {
@@ -154,7 +153,6 @@ const About = () => {
           Join Our Community
         </Button>
       </Box>
-      <Footer />
     </Container>
   );
 };

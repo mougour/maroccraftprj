@@ -57,24 +57,30 @@ const darkTheme = createTheme({
 const sidebarSections = [
   {
     title: 'Main',
-    items: [{ title: 'Dashboard', icon: Home, path: '/dashboard' }],
+    items: [
+      { title: 'Dashboard', icon: Home, path: '/dashboard' },
+      { title: 'Profile', icon: User, path: '/dashboard/profile' }
+    ],
   },
   {
     title: 'Products',
     items: [
-      { title: 'All Products', icon: ShoppingCart, path: '/products' },    ],
+      { title: 'All Products', icon: ShoppingCart, path: '/products' },
+      { title: 'Add Product', icon: Package, path: '/dashboard/add-product' }
+    ],
   },
   {
     title: 'Orders & Purchases',
     items: [
       { title: 'My Orders', icon: Package, path: '/dashboard/orders' },
+      { title: 'Order History', icon: Receipt, path: '/dashboard/order-history' }
     ],
   },
   {
     title: 'Shopping & Wishlist',
     items: [
       { title: 'My Cart', icon: ShoppingCart, path: '/dashboard/cart' },
-      { title: 'Wishlist', icon: Heart, path: '/dashboard/wishlist' },
+      { title: 'Wishlist', icon: Heart, path: '/dashboard/wishlist' }
     ],
   },
   {
@@ -82,10 +88,16 @@ const sidebarSections = [
     items: [
       { title: 'My Reviews', icon: Star, path: '/dashboard/reviews' },
       { title: 'Messages', icon: MessageSquare, path: '/dashboard/messages' },
+      { title: 'Notifications', icon: Bell, path: '/dashboard/notifications' }
     ],
   },
-  
-  
+  {
+    title: 'Settings',
+    items: [
+      { title: 'Account Settings', icon: Settings, path: '/dashboard/settings' },
+      { title: 'Security', icon: Lock, path: '/dashboard/security' }
+    ],
+  }
 ];
 
 /**
@@ -151,7 +163,7 @@ function App() {
   const theme = useTheme();
   const navigate = useNavigate();
 
-  // Define logout in App so it’s available where it’s used.
+  // Define logout in App so it's available where it's used.
   const logout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');

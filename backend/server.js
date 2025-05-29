@@ -19,6 +19,8 @@ import reviewRouter from './routes/review.js';
 import verifyRouter from './routes/verifyRouter.js';
 import artisanReviewRouter from './routes/artisanReview.js';
 import testUserCreationRouter from './routes/testUserCreation.js';
+import categoryRouter from './routes/category.js';
+import messageRouter from './routes/message.js';
 
 // Load Environment Variables
 dotenv.config(); 
@@ -37,8 +39,7 @@ connectDB()
   .catch((err) => console.error('❌ Database Connection Failed:', err));
 
 // 🛣️ API Routes
-app.use('/api/login', authRouter);
-app.use('/api/register', userRouter);
+app.use('/api', authRouter);
 app.use('/api/users', usersRouter);
 app.use('/api/products', productRouter);
 app.use('/api/orders', orderRouter);
@@ -50,6 +51,8 @@ app.use('/api/reviews', reviewRouter);
 app.use("/api/verify-email", verifyRouter);
 app.use("/api/artisanreviews", artisanReviewRouter);
 app.use("/api/test-user", testUserCreationRouter);
+app.use('/api/categories', categoryRouter);
+app.use('/api/messages', messageRouter);
 
 // 🌍 Server Setup
 const PORT = process.env.PORT || 5000;

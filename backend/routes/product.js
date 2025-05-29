@@ -22,7 +22,7 @@ const upload = multer({ storage });
 productRouter.get("/", async (req, res) => {
   try {
     // Retrieve products and populate user data
-    let products = await Product.find().populate("user").lean();
+    let products = await Product.find().populate("user").populate("category").lean();
     
     // For each product, fetch reviews and compute average rating
     products = await Promise.all(
@@ -45,7 +45,7 @@ productRouter.get("/", async (req, res) => {
 // GET a single product (calculate rating from reviews)
 productRouter.get("/:id", async (req, res) => {
   try {
-    const product = await Product.findById(req.params.id).populate("user").lean();
+    const product = await Product.findById(req.params.id).populate("user").populate("category").lean();
     if (!product) return res.status(404).json({ error: "Product not found" });
 
     const reviews = await Review.find({ productId: req.params.id });
@@ -138,7 +138,7 @@ productRouter.delete("/:id", verifyToken, async (req, res) => {
 // GET products by user
 productRouter.get("/user/:userId", verifyToken, async (req, res) => {
   try {
-    const products = await Product.find({ user: req.params.userId });
+    const products = await Product.find({ user: req.params.userId }).populate("category");
     res.json(products);
   } catch (error) {
     res.status(500).json({ error: error.message });

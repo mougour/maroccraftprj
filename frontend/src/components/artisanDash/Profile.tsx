@@ -4,6 +4,24 @@ import axios from 'axios';
 import toast from 'react-hot-toast';
 import { useUserAuth } from '../../UserAuthContext';
 
+interface User {
+  _id: string;
+  name?: string;
+  email?: string;
+  phoneNumber?: string;
+  address?: string;
+  bio?: string;
+  specialty?: string;
+  socialLinks?: {
+    instagram?: string;
+    twitter?: string;
+    website?: string;
+  };
+  profilePicture?: string;
+  createdAt: string;
+  role: string;
+}
+
 const Profile = () => {
   useEffect(() => {
     document.title = 'Profile - MAROCRAFT';
@@ -11,27 +29,10 @@ const Profile = () => {
 
   const token = sessionStorage.getItem('token');
   const fileInputRef = useRef(null);
-    interface User {
-    _id: string;
-    name?: string;
-    email?: string;
-    phoneNumber?: string;
-    address?: string;
-    bio?: string;
-    specialty?: string;
-    socialLinks?: {
-      instagram?: string;
-      twitter?: string;
-      website?: string;
-    };
-    profilePicture?: string;
-    createdAt: string;
-    role: string;
-  }
   const { user, updateProfilePicture } = useUserAuth();
 
   // Initialize state for profile info with extra artisan fields
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<Partial<User>>({
     name: '',
     email: '',
     phoneNumber: '',
@@ -86,13 +87,13 @@ const Profile = () => {
     setLoading(true);
     setMessage('');
     try {
-      const updateData = { ...formData };
+      const updateData: Partial<User> = { ...formData };
       if (password) {
         updateData.password = password;
       }
       // Use your API endpoint to update profile data
       const response = await axios.put(
-        `http://localhost:5000/api/register/${user._id}`,
+        `http://localhost:5000/api/register/${user?._id}`,
         updateData,
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -102,6 +103,7 @@ const Profile = () => {
     } catch (err) {
       console.error(err);
       setMessage('Error updating profile.');
+      toast.error('Error updating profile.');
     }
     setLoading(false);
   };
@@ -134,13 +136,14 @@ const Profile = () => {
 
   // Upload new profile picture and update the record
   const handlePictureUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+    const file = e.target.files?.[0];
+    if (!file || !user?._id || !token) return;
     
     const form = new FormData();
     form.append('image', file);
   
     try {
+      setLoading(true);
       const response = await axios.post(
         `http://localhost:5000/api/profile/upload/${user._id}`,
         form,
@@ -153,30 +156,26 @@ const Profile = () => {
       );
   
       const imageUrl = response.data.imageUrl;
-      setProfilePicture(imageUrl);
-      updateProfilePicture(imageUrl);
       if (imageUrl) {
+        setProfilePicture(imageUrl);
+        updateProfilePicture(imageUrl);
         toast.success('Profile picture updated successfully!');
       } else {
         toast.error('Try a different image!');
       }
       
-      // Update user profile with new picture
-      const updateResponse = await axios.put(
-        `http://localhost:5000/api/users/${user._id}`,
-        { profilePicture: imageUrl },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-  
-      sessionStorage.setItem('user', JSON.stringify(updateResponse.data));
-      setMessage('Profile picture updated successfully!');
     } catch (error) {
       console.error('Upload failed', error);
-      toast.error('Try a different image!');
-      setMessage('Error uploading profile picture.');
+      toast.error('Error uploading profile picture.');
+    } finally {
+       setLoading(false);
     }
   };
   
+  if (!user) {
+    return <div>Loading profile...</div>;
+  }
+
   return (
     <div className="space-y-6 max-w-4xl mx-auto p-4">
       <div className="bg-white p-8 rounded-xl shadow-sm">
@@ -205,11 +204,13 @@ const Profile = () => {
             />
           </div>
           <div>
-            <h3 className="text-2xl font-semibold">{formData.name || 'Artisan Name'}</h3>
-            <p className="text-gray-600">Artisan since {user?.createdAt.slice(0, 4)}</p>
+            <h3 className="text-2xl font-semibold">{user?.name || 'User Name'}</h3>
+            <p className="text-gray-600">
+              Member since {user?.createdAt ? user.createdAt.slice(0, 4) : 'N/A'}
+            </p>
             <div className="mt-2 flex items-center space-x-2">
               <span className="px-3 py-1 bg-[#FFF8E7] text-[#FFB636] rounded-full text-sm font-medium">
-                {user?.role === 'artisan' ? 'Verified Artisan' : 'Verified Customer'}
+                {user?.role === 'artisan' ? 'Artisan' : user?.role === 'costumer' ? 'Customer' : 'User'}
               </span>
             </div>
           </div>
@@ -219,7 +220,7 @@ const Profile = () => {
         <div className="mt-8">
           <h3 className="text-lg font-semibold mb-6">Profile Information</h3>
           <form className="space-y-6" onSubmit={handleSubmit}>
-            {/* Basic Info */}
+            {/* Basic Info (visible to all) */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -281,93 +282,100 @@ const Profile = () => {
               </div>
             </div>
 
-            {/* Artisan Details */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Specialty
-                </label>
-                <input 
-                  type="text" 
-                  name="specialty"
-                  value={formData.specialty}
-                  onChange={handleInputChange}
-                  placeholder="e.g. Woodworking, Pottery"
-                  className="w-full px-4 py-2 rounded-lg border border-gray-200 focus:ring-2 focus:ring-[#FFF8E7] focus:border-[#FFB636] transition-colors"
-                />
+            {/* Artisan Details (conditionally rendered) */}
+            {user?.role === 'artisan' && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Specialty
+                  </label>
+                  <input 
+                    type="text" 
+                    name="specialty"
+                    value={formData.specialty}
+                    onChange={handleInputChange}
+                    placeholder="e.g. Woodworking, Pottery"
+                    className="w-full px-4 py-2 rounded-lg border border-gray-200 focus:ring-2 focus:ring-[#FFF8E7] focus:border-[#FFB636] transition-colors"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Address
+                  </label>
+                  <textarea 
+                    rows={2}
+                    name="address"
+                    value={formData.address}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-2 rounded-lg border border-gray-200 focus:ring-2 focus:ring-[#FFF8E7] focus:border-[#FFB636] transition-colors"
+                  />
+                </div>
               </div>
+            )}
+
+            {/* Bio (conditionally rendered) */}
+             {user?.role === 'artisan' && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Address
+                  Bio
                 </label>
                 <textarea 
-                  rows={2}
-                  name="address"
-                  value={formData.address}
+                  rows={4}
+                  name="bio"
+                  value={formData.bio}
                   onChange={handleInputChange}
                   className="w-full px-4 py-2 rounded-lg border border-gray-200 focus:ring-2 focus:ring-[#FFF8E7] focus:border-[#FFB636] transition-colors"
                 />
               </div>
-            </div>
+            )}
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Bio
-              </label>
-              <textarea 
-                rows={4}
-                name="bio"
-                value={formData.bio}
-                onChange={handleInputChange}
-                className="w-full px-4 py-2 rounded-lg border border-gray-200 focus:ring-2 focus:ring-[#FFF8E7] focus:border-[#FFB636] transition-colors"
-              />
-            </div>
-
-            {/* Social Links Section */}
-            <div className="mt-8">
-              <h3 className="text-lg font-semibold mb-4">Social Links</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Instagram
-                  </label>
-                  <input 
-                    type="text" 
-                    name="instagram"
-                    value={formData.instagram}
-                    onChange={handleInputChange}
-                    placeholder="Instagram URL"
-                    className="w-full px-4 py-2 rounded-lg border border-gray-200 focus:ring-2 focus:ring-[#FFF8E7] focus:border-[#FFB636] transition-colors"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Twitter
-                  </label>
-                  <input 
-                    type="text" 
-                    name="twitter"
-                    value={formData.twitter}
-                    onChange={handleInputChange}
-                    placeholder="Twitter URL"
-                    className="w-full px-4 py-2 rounded-lg border border-gray-200 focus:ring-2 focus:ring-[#FFF8E7] focus:border-[#FFB636] transition-colors"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Website
-                  </label>
-                  <input 
-                    type="text" 
-                    name="website"
-                    value={formData.website}
-                    onChange={handleInputChange}
-                    placeholder="Website URL"
-                    className="w-full px-4 py-2 rounded-lg border border-gray-200 focus:ring-2 focus:ring-[#FFF8E7] focus:border-[#FFB636] transition-colors"
-                  />
+            {/* Social Links Section (conditionally rendered) */}
+            {user?.role === 'artisan' && (
+              <div className="mt-8">
+                <h3 className="text-lg font-semibold mb-4">Social Links</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Instagram
+                    </label>
+                    <input 
+                      type="text" 
+                      name="instagram"
+                      value={formData.instagram}
+                      onChange={handleInputChange}
+                      placeholder="Instagram URL"
+                      className="w-full px-4 py-2 rounded-lg border border-gray-200 focus:ring-2 focus:ring-[#FFF8E7] focus:border-[#FFB636] transition-colors"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Twitter
+                    </label>
+                    <input 
+                      type="text" 
+                      name="twitter"
+                      value={formData.twitter}
+                      onChange={handleInputChange}
+                      placeholder="Twitter URL"
+                      className="w-full px-4 py-2 rounded-lg border border-gray-200 focus:ring-2 focus:ring-[#FFF8E7] focus:border-[#FFB636] transition-colors"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Website
+                    </label>
+                    <input 
+                      type="text" 
+                      name="website"
+                      value={formData.website}
+                      onChange={handleInputChange}
+                      placeholder="Website URL"
+                      className="w-full px-4 py-2 rounded-lg border border-gray-200 focus:ring-2 focus:ring-[#FFF8E7] focus:border-[#FFB636] transition-colors"
+                    />
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
 
             <div className="flex justify-end space-x-4">
               <button 

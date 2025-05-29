@@ -15,11 +15,13 @@ import {
   Tab,
   Divider,
   Avatar,
+  CircularProgress
 } from '@mui/material';
 import { Heart, ShoppingCart } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import axios from 'axios';
+import { useUserAuth } from '../../UserAuthContext';
 
 const Favorites = () => {
   useEffect(() => {
@@ -27,14 +29,21 @@ const Favorites = () => {
   }, []);
   const [favoriteDocs, setFavoriteDocs] = useState([]); // an array of favorite documents
   const [activeTab, setActiveTab] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const navigate = useNavigate();
 
   // Get user & token from sessionStorage
-  const user = JSON.parse(sessionStorage.getItem('user'));
+  const { user } = useUserAuth();
   const token = sessionStorage.getItem('token');
 
   // Fetch user's favorites from the server
   const fetchFavorites = async () => {
+    if (!user || !token) {
+      setLoading(false);
+      setError('User not logged in.');
+      return;
+    }
     try {
       const response = await axios.get(
         `http://localhost:5000/api/favorites/${user._id}`,
@@ -46,12 +55,15 @@ const Favorites = () => {
       // e.g. [ { _id, user, product: {...} }, { ... }, ... ]
       const data = response.data;
 
-      // Ensure it's an array
-      const favoritesArray = Array.isArray(data) ? data : [data];
+      // Ensure it's an array and contains product data
+      const favoritesArray = Array.isArray(data) ? data.filter(fav => fav.product) : []; // Filter out entries without product
       setFavoriteDocs(favoritesArray);
+      setLoading(false);
     } catch (error) {
       console.error('Error fetching favorites:', error);
       toast.error('Failed to load favorites.');
+      setError('Failed to load favorites.');
+      setLoading(false);
     }
   };
 
@@ -59,26 +71,28 @@ const Favorites = () => {
     if (user && token) {
       fetchFavorites();
     }
-  }, []);
+  }, [user, token]);
 
   // Remove a single favorite (call DELETE /api/favorite/:id)
   const removeFromFavorites = async (favoriteId) => {
+    setFavoriteDocs((prev) => prev.filter((fav) => fav._id !== favoriteId));
+    toast.loading('Removing from favorites...', { id: favoriteId });
+
     try {
-      // Call the DELETE endpoint with the favorite's _id.
       const response = await axios.delete(`http://localhost:5000/api/favorites/${favoriteId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       
       if (response.data) {
-        toast.success('Removed from favorites');
-        // Remove the favorite from local state by filtering out the deleted favorite.
-        setFavoriteDocs((prev) => prev.filter((fav) => fav._id !== favoriteId));
+        toast.success('Removed from favorites', { id: favoriteId });
       } else {
-        toast.error('Favorite not found.');
+        toast.error(response.data.error || 'Favorite not found.', { id: favoriteId });
+        fetchFavorites();
       }
     } catch (error) {
       console.error('Error removing favorite:', error);
-      toast.error('Could not remove favorite. Please try again.');
+      toast.error('Could not remove favorite. Please try again.', { id: favoriteId });
+      fetchFavorites();
     }
   };
   
@@ -89,6 +103,23 @@ const Favorites = () => {
   };
 
   const handleTabChange = (event, newValue) => setActiveTab(newValue);
+
+  // Loading and Error states
+  if (loading) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (error) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
+        <Typography variant="h6" color="error">{error}</Typography>
+      </Box>
+    );
+  }
 
   // A card to display each favorited product
   const ProductCard = ({ favorite }) => {
@@ -105,20 +136,20 @@ const Favorites = () => {
           height: '100%',
           display: 'flex',
           flexDirection: 'column',
-          transition: 'all 0.2s ease',
+          transition: 'all 0.3s ease',
           '&:hover': {
-            transform: 'translateY(-4px)',
-            boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+            transform: 'translateY(-5px)',
+            boxShadow: '0 8px 25px rgba(0,0,0,0.15)',
           },
+          borderRadius: 2,
         }}
       >
-        <Box sx={{ position: 'relative' }}>
+        <Box sx={{ position: 'relative', aspectRatio: '1/1' }}>
           <CardMedia
             component="img"
-            height="260"
             image={product.images?.[0] || '/default.png'}
             alt={product.name}
-            sx={{ objectFit: 'cover', cursor: 'pointer' , aspectRatio: '1/1'}}
+            sx={{ objectFit: 'cover', cursor: 'pointer', width: '100%', height: '100%' }}
             onClick={() => navigate(`/products/${product._id}`)}
           />
           {/* Remove from favorites icon */}
@@ -128,9 +159,10 @@ const Favorites = () => {
               position: 'absolute',
               right: 8,
               top: 8,
-              backgroundColor: 'white',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+              backgroundColor: 'rgba(255, 255, 255, 0.8)',
+              boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
               '&:hover': { backgroundColor: 'white', transform: 'scale(1.1)' },
+              zIndex: 1
             }}
           >
             <Heart size={20} fill="#ff4081" color="#ff4081" />
@@ -142,7 +174,8 @@ const Favorites = () => {
             flexGrow: 1,
             display: 'flex',
             flexDirection: 'column',
-            gap: 1,
+            gap: 1.5,
+            p: 2
           }}
         >
           {/* Artisan / user info */}
@@ -154,9 +187,9 @@ const Favorites = () => {
               <Avatar
                 src={product.user.profilePicture || '/default.png'}
                 alt={product.user.name || 'Artisan'}
-                sx={{ width: 32, height: 32, mr: 1 }}
+                sx={{ width: 32, height: 32, mr: 1, border: '1px solid #e0e0e0' }}
               />
-              <Typography variant="subtitle2">
+              <Typography variant="subtitle2" color="text.secondary">
                 {product.user.name || 'Unknown Artisan'}
               </Typography>
             </Box>
@@ -165,6 +198,7 @@ const Favorites = () => {
           {/* Product name */}
           <Typography
             variant="h6"
+            fontWeight="bold"
             sx={{ cursor: 'pointer' }}
             onClick={() => navigate(`/products/${product._id}`)}
           >
@@ -174,12 +208,12 @@ const Favorites = () => {
           {/* Tags */}
           <Box sx={{ display: 'flex', flexWrap: 'wrap', mb: 1 }}>
             {product.tags?.map((tag) => (
-              <Chip key={tag} label={tag} size="small" sx={{ mr: 0.5, mb: 0.5 }} />
+              <Chip key={tag} label={tag} size="small" sx={{ mr: 0.5, mb: 0.5, bgcolor: 'action.selected' }} />
             ))}
           </Box>
 
           {/* Rating */}
-          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
             <Rating
               value={product.rating || 0}
               precision={0.5}
@@ -200,8 +234,8 @@ const Favorites = () => {
               mt: 'auto',
             }}
           >
-            <Typography variant="h6" color="primary">
-              ${product.price || 0}
+            <Typography variant="h5" color="primary" fontWeight="bold">
+              ${Number(product.price || 0).toFixed(2)}
             </Typography>
             <IconButton
               color="primary"
@@ -210,6 +244,7 @@ const Favorites = () => {
                 backgroundColor: 'primary.main',
                 color: 'white',
                 '&:hover': { backgroundColor: 'primary.dark' },
+                borderRadius: '8px'
               }}
             >
               <ShoppingCart size={20} />
@@ -221,16 +256,14 @@ const Favorites = () => {
   };
 
   return (
-    <Container maxWidth="lg">
+    <Container maxWidth="lg" sx={{ py: 4 }}>
       <Box sx={{ mb: 4 }}>
-        <Typography variant="h3" gutterBottom>
+        <Typography variant="h3" gutterBottom fontWeight="bold" color="text.primary">
           My Favorites
         </Typography>
 
-        {/* If you want multiple tabs (e.g. Products vs. Artisans), keep this. 
-            Otherwise, remove or adapt as needed. */}
-        <Tabs value={activeTab} onChange={handleTabChange} sx={{ mb: 3 }}>
-          <Tab label={`Products (${favoriteDocs.length})`} />
+        <Tabs value={activeTab} onChange={handleTabChange} sx={{ mb: 3, borderBottom: '1px solid #e0e0e0' }}>
+          <Tab label={`Products (${favoriteDocs.length})`} sx={{ fontWeight: activeTab === 0 ? 'bold' : 'normal' }} />
         </Tabs>
       </Box>
 
@@ -249,25 +282,19 @@ const Favorites = () => {
             <Box
               sx={{
                 textAlign: 'center',
-                py: 8,
-                backgroundColor: 'background.paper',
+                mt: 8,
+                py: 4,
+                bgcolor: 'background.paper',
                 borderRadius: 2,
+                boxShadow: 1
               }}
             >
-              <Typography variant="h5" gutterBottom>
-                No favorite products yet
+              <Typography variant="h5" color="text.secondary" gutterBottom>
+                Your favorites list is empty.
               </Typography>
-              <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
-                Start exploring our collection and save items you love.
+              <Typography variant="body1" color="text.secondary">
+                Find something you love on our <Link to="/shop" style={{ color: '#ff9800', textDecoration: 'none' }}>shop page</Link>.
               </Typography>
-              <Button
-                variant="contained"
-                color="primary"
-                component={Link}
-                to="/products"
-              >
-                Explore Products
-              </Button>
             </Box>
           )}
         </>

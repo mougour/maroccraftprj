@@ -12,7 +12,8 @@ const productSchema = new mongoose.Schema(
       default: ["https://via.placeholder.com/150"], // Default placeholder image
     },
     category: {
-      type: String,
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Category",
       required: [true, "Category is required"],
     },
     description: {

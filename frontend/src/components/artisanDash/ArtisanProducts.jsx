@@ -21,21 +21,16 @@ import {
   Autocomplete,
   Chip,
   useTheme,
+  InputLabel,
+  FormControl,
+  FormHelperText,
+  Input,
+  Select,
 } from '@mui/material';
 import { Edit, Trash2, Plus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import toast from 'react-hot-toast';
-
-const categories = [
-  'Ceramics',
-  'Textiles',
-  'Woodwork',
-  'Jewelry',
-  'Home Decor',
-  'Kitchen',
-  'Art',
-];
 
 // ----------------------------------
 // ProductCard Component
@@ -73,9 +68,9 @@ function ProductCard({ product, onEdit, onDelete }) {
         </Typography>
 
         <Box sx={{ mt: 1, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-          {product.category && (
+          {product.category && product.category.name && (
             <Chip
-              label={product.category}
+              label={product.category.name}
               size="small"
               color="secondary"
               variant="outlined"
@@ -139,6 +134,8 @@ const UserDash = () => {
   const [openEditDialog, setOpenEditDialog] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
 
+  const [fetchedCategories, setFetchedCategories] = useState([]);
+
   // For product details in the add form:
   const [newProduct, setNewProduct] = useState({
     name: '',
@@ -158,6 +155,22 @@ const UserDash = () => {
 
   useEffect(() => {
     document.title = 'My Products - MAROCAFT';
+  }, []);
+
+  // Fetch categories when the component mounts
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await axios.get('http://localhost:5000/api/categories');
+        console.log('Fetched categories for dialog:', response.data);
+        setFetchedCategories(response.data);
+      } catch (error) {
+        console.error('Error fetching categories for dialog:', error);
+        toast.error('Failed to load categories for the form.');
+      }
+    };
+
+    fetchCategories();
   }, []);
 
   // ---------------------------
@@ -197,6 +210,11 @@ const UserDash = () => {
   // Add Product Handler
   // ---------------------------
   const handleAddProduct = async () => {
+    if (!newProduct.name || !newProduct.price || !newProduct.category || !newProduct.stock) {
+      toast.error('Please fill in all required fields.');
+      return;
+    }
+
     try {
       const formData = new FormData();
       formData.append('name', newProduct.name);
@@ -230,7 +248,8 @@ const UserDash = () => {
       fetchProducts();
     } catch (error) {
       console.error('Error adding product:', error);
-      toast.error('Error adding product');
+      const errorMessage = error.response?.data?.error || error.message || 'Error adding product';
+      toast.error(errorMessage);
     }
   };
 
@@ -238,6 +257,11 @@ const UserDash = () => {
   // Edit Product Handler
   // ---------------------------
   const handleEditProduct = async () => {
+    if (!selectedProduct.name || !selectedProduct.price || !selectedProduct.category || !selectedProduct.stock) {
+      toast.error('Please fill in all required fields for editing.');
+      return;
+    }
+
     try {
       const formData = new FormData();
       formData.append('name', selectedProduct.name);
@@ -268,7 +292,8 @@ const UserDash = () => {
       fetchProducts();
     } catch (error) {
       console.error('Error updating product:', error);
-      toast.error('Error updating product');
+      const errorMessage = error.response?.data?.error || error.message || 'Error updating product';
+      toast.error(errorMessage);
     }
   };
 
@@ -276,15 +301,18 @@ const UserDash = () => {
   // Delete Product Handler
   // ---------------------------
   const handleDelete = async (productId) => {
-    try {
-      await axios.delete(`http://localhost:5000/api/products/${productId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      fetchProducts();
-      toast.success('Product deleted successfully!');
-    } catch (error) {
-      console.error('Error deleting product:', error);
-      toast.error('Error deleting product');
+    if (window.confirm('Are you sure you want to delete this product?')) {
+      try {
+        await axios.delete(`http://localhost:5000/api/products/${productId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        fetchProducts();
+        toast.success('Product deleted successfully!');
+      } catch (error) {
+        console.error('Error deleting product:', error);
+        const errorMessage = error.response?.data?.error || error.message || 'Error deleting product';
+        toast.error(errorMessage);
+      }
     }
   };
 
@@ -345,6 +373,7 @@ const UserDash = () => {
                     onEdit={() => {
                       setSelectedProduct({
                         ...product,
+                        category: product.category ? product.category._id : '',
                         stock: product.countInStock,
                         tags: Array.isArray(product.tags)
                           ? product.tags
@@ -398,6 +427,7 @@ const UserDash = () => {
                 setNewProduct({ ...newProduct, name: e.target.value })
               }
               variant="outlined"
+              required
             />
             <TextField
               label="Price"
@@ -409,23 +439,27 @@ const UserDash = () => {
                 setNewProduct({ ...newProduct, price: e.target.value })
               }
               variant="outlined"
+              required
             />
-            <TextField
-              select
-              label="Category"
-              fullWidth
-              value={newProduct.category}
-              onChange={(e) =>
-                setNewProduct({ ...newProduct, category: e.target.value })
-              }
-              variant="outlined"
-            >
-              {categories.map((category) => (
-                <MenuItem key={category} value={category}>
-                  {category}
+            <FormControl fullWidth variant="outlined" required>
+              <InputLabel>Category</InputLabel>
+              <Select
+                label="Category"
+                value={newProduct.category}
+                onChange={(e) =>
+                  setNewProduct({ ...newProduct, category: e.target.value })
+                }
+              >
+                 <MenuItem value="">
+                  <em>Select a Category</em>
                 </MenuItem>
-              ))}
-            </TextField>
+                {fetchedCategories.map((category) => (
+                  <MenuItem key={category._id} value={category._id}>
+                    {category.name}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
             <TextField
               label="Stock"
               type="number"
@@ -436,6 +470,7 @@ const UserDash = () => {
                 setNewProduct({ ...newProduct, stock: e.target.value })
               }
               variant="outlined"
+              required
             />
             <TextField
               label="Description"
@@ -466,15 +501,15 @@ const UserDash = () => {
                 />
               )}
             />
-            <Button variant="outlined" component="label">
-              Upload Images
-              <input
-                type="file"
-                multiple
-                hidden
-                onChange={handleNewProductImageChange}
-              />
-            </Button>
+            <FormControl fullWidth margin="normal">
+             <Typography variant="subtitle2" gutterBottom>Product Images</Typography>
+             <InputLabel shrink>Select Images (up to 5)</InputLabel>
+             <Input
+               type="file"
+               inputProps={{ multiple: true, accept: 'image/*' }}
+               onChange={handleNewProductImageChange}
+             />
+            </FormControl>
             {newProductImages.length > 0 && (
               <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mt: 1 }}>
                 {newProductImages.map((file, index) => (
@@ -503,8 +538,8 @@ const UserDash = () => {
       >
         <DialogTitle
           sx={{
-            bgcolor: 'primary.main',
-            color: 'primary.contrastText',
+            bgcolor: 'secondary.main',
+            color: 'secondary.contrastText',
             fontWeight: 'bold',
           }}
         >
@@ -523,51 +558,53 @@ const UserDash = () => {
             >
               <TextField
                 label="Product Name"
+                placeholder="e.g., Handmade Vase"
                 fullWidth
                 value={selectedProduct.name}
                 onChange={(e) =>
-                  setSelectedProduct({
-                    ...selectedProduct,
-                    name: e.target.value,
-                  })
+                  setSelectedProduct({ ...selectedProduct, name: e.target.value })
                 }
                 variant="outlined"
+                required
               />
               <TextField
                 label="Price"
                 type="number"
+                placeholder="e.g., 50"
                 fullWidth
                 value={selectedProduct.price}
                 onChange={(e) =>
-                  setSelectedProduct({
-                    ...selectedProduct,
-                    price: e.target.value,
-                  })
+                  setSelectedProduct({ ...selectedProduct, price: e.target.value })
                 }
                 variant="outlined"
+                required
               />
-              <TextField
-                select
-                label="Category"
-                fullWidth
-                value={selectedProduct.category || ''}
-                onChange={(e) =>
-                  setSelectedProduct({
-                    ...selectedProduct,
-                    category: e.target.value,
-                  })
-                }
-                variant="outlined"
-              >
-                {categories.map((category) => (
-                  <MenuItem key={category} value={category}>
-                    {category}
+              <FormControl fullWidth variant="outlined" required>
+                <InputLabel>Category</InputLabel>
+                <Select
+                  label="Category"
+                  value={selectedProduct.category}
+                  onChange={(e) =>
+                    setSelectedProduct({
+                      ...selectedProduct,
+                      category: e.target.value,
+                    })
+                  }
+                >
+                   <MenuItem value="">
+                    <em>Select a Category</em>
                   </MenuItem>
-                ))}
-              </TextField>
+                  {fetchedCategories.map((category) => (
+                    <MenuItem key={category._id} value={category._id}>
+                      {category.name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
               <TextField
                 label="Stock"
                 type="number"
+                placeholder="e.g., 100"
                 fullWidth
                 value={selectedProduct.stock}
                 onChange={(e) =>
@@ -577,13 +614,15 @@ const UserDash = () => {
                   })
                 }
                 variant="outlined"
+                required
               />
               <TextField
                 label="Description"
+                placeholder="Short description of your product"
                 multiline
                 rows={4}
                 fullWidth
-                value={selectedProduct.description || ''}
+                value={selectedProduct.description}
                 onChange={(e) =>
                   setSelectedProduct({
                     ...selectedProduct,
@@ -596,7 +635,7 @@ const UserDash = () => {
                 multiple
                 freeSolo
                 options={[]}
-                value={selectedProduct.tags || []}
+                value={selectedProduct.tags}
                 onChange={(event, newValue) =>
                   setSelectedProduct({ ...selectedProduct, tags: newValue })
                 }
@@ -609,15 +648,16 @@ const UserDash = () => {
                   />
                 )}
               />
-              <Button variant="outlined" component="label">
-                Upload New Images
-                <input
-                  type="file"
-                  multiple
-                  hidden
-                  onChange={handleEditProductImageChange}
-                />
-              </Button>
+              <FormControl fullWidth margin="normal">
+               <Typography variant="subtitle2" gutterBottom>Product Images</Typography>
+               <InputLabel shrink>Select Images (up to 5)</InputLabel>
+               <Input
+                 type="file"
+                 multiple
+                 hidden
+                 onChange={handleEditProductImageChange}
+               />
+              </FormControl>
               {editProductImages.length > 0 && (
                 <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mt: 1 }}>
                   {editProductImages.map((file, index) => (
@@ -627,36 +667,20 @@ const UserDash = () => {
                   ))}
                 </Box>
               )}
-              {selectedProduct.images && (
-                <Box sx={{ mt: 2 }}>
-                  <Typography variant="subtitle2" gutterBottom>
-                    Current Images:
-                  </Typography>
-                  <Grid container spacing={1}>
-                    {selectedProduct.images.map((img, index) => (
-                      <Grid item xs={6} sm={4} key={index}>
-                        <Box
-                          component="img"
-                          src={img}
-                          alt={`Product ${index}`}
-                          sx={{
-                            width: '100%',
-                            height: 'auto',
-                            borderRadius: 1,
-                            objectFit: 'cover',
-                          }}
-                        />
-                      </Grid>
-                    ))}
-                  </Grid>
-                </Box>
+              {selectedProduct.images && selectedProduct.images.length > 0 && (
+                 <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mt: 1 }}>
+                  <Typography variant="subtitle2" gutterBottom width="100%">Existing Images:</Typography>
+                   {selectedProduct.images.map((imageUrl, index) => (
+                    <Box key={index} component="img" src={imageUrl} alt={`Existing ${index + 1}`} sx={{ width: 50, height: 50, objectFit: 'cover', borderRadius: 1 }} />
+                   ))}
+                 </Box>
               )}
             </Box>
           )}
         </DialogContent>
         <DialogActions sx={{ p: 2 }}>
           <Button onClick={() => setOpenEditDialog(false)}>Cancel</Button>
-          <Button variant="contained" onClick={handleEditProduct}>
+          <Button variant="contained" color="secondary" onClick={handleEditProduct}>
             Save Changes
           </Button>
         </DialogActions>

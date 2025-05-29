@@ -42,13 +42,21 @@ import toast from "react-hot-toast";
 
 const categories = [
   "All Categories",
-  "Ceramics",
-  "Textiles",
-  "Woodwork",
-  "Jewelry",
-  "Home Decor",
-  "Kitchen",
-  "Art",
+  "Zellige Crafting",
+  "Tadelakt Plastering",
+  "Wood Carving",
+  "Leatherwork",
+  "Metalwork",
+  "Pottery & Ceramics",
+  "Textile Weaving",
+  "Jewelry Making",
+  "Traditional Clothing Tailoring",
+  "Basket Weaving",
+  "Carpet & Rug Making",
+  "Painting & Calligraphy",
+  "Natural Cosmetics & Soap",
+  "Traditional Musical Instruments",
+  "Glass & Mirror Decoration",
 ];
 
 const Products = () => {
@@ -66,12 +74,33 @@ const Products = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true); // For showing a loading state
   const navigate = useNavigate();
+  const location = useLocation(); // Import useLocation
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const query = params.get("search") || "";
+    const categoryParam = params.get("category"); // Read the category parameter
+
     setSearchQuery(decodeURIComponent(query));
-  }, [location.search]);
+
+    // Set selected categories based on URL parameter
+    if (categoryParam) {
+      // Find the exact category name from the predefined list (case-insensitive match)
+      const matchedCategory = categories.find(
+        cat => cat.toLowerCase() === categoryParam.toLowerCase()
+      );
+      if (matchedCategory) {
+        setSelectedCategories([matchedCategory]);
+      } else {
+        // If category param is invalid or not found, default to All Categories
+        setSelectedCategories(["All Categories"]);
+      }
+    } else {
+      // If no category param, default to All Categories
+      setSelectedCategories(["All Categories"]);
+    }
+
+  }, [location.search]); // Depend on location.search to re-run when URL changes
 
   const user = JSON.parse(sessionStorage.getItem("user"));
   const token = sessionStorage.getItem("token");
@@ -179,14 +208,14 @@ const Products = () => {
         reviews: product.numReviews || 0,
         image: product.images[0] || "",
         artisan: {
-          id: product.user._id || 0,
-          name: product.user.name || "Unknown",
-          avatar: product.user.profilePicture || "",
-          location: product.user.address || "Canada, Ontario",
+          id: product.user?._id || 0,
+          name: product.user?.name || "Unknown",
+          avatar: product.user?.profilePicture || "",
+          location: product.user?.address || "Canada, Ontario",
           rating: product.averageRating || 3,
           reviews: product.artisanReviews || 125,
         },
-        category: product.category || "Uncategorized",
+        category: product.category?.name || "Uncategorized",
         tags: product.tags || [],
         inStock: product.countInStock > 0,
         isFavorite: false,
@@ -227,7 +256,7 @@ const Products = () => {
 
   // Filtering UI (Sidebar/Drawer)
   const FilterContent = () => (
-    <Box sx={{ p: 3 }}>
+    <Box sx={{ p: 2 }}>
       {/* Search */}
       <Box
         sx={{
@@ -248,7 +277,7 @@ const Products = () => {
         />
       </Box>
       {/* Categories */}
-      <Typography variant="subtitle1" gutterBottom>
+      <Typography variant="h6" gutterBottom fontWeight="bold">
         Categories
       </Typography>
       <FormGroup>
@@ -259,15 +288,19 @@ const Products = () => {
               <Checkbox
                 checked={selectedCategories.includes(category)}
                 onChange={() => handleCategoryChange(category)}
+                size="small"
               />
             }
-            label={category}
+            label={
+              <Typography variant="body2">{category}</Typography>
+            }
+            sx={{ mb: 0.5 }}
           />
         ))}
       </FormGroup>
       <Divider sx={{ my: 3 }} />
       {/* Price Range */}
-      <Typography variant="subtitle1" gutterBottom>
+      <Typography variant="h6" gutterBottom fontWeight="bold">
         Price Range
       </Typography>
       <Slider
@@ -276,17 +309,18 @@ const Products = () => {
         valueLabelDisplay="auto"
         min={0}
         max={3000}
-        sx={{ mt: 2 }}
+        sx={{ mt: 1 }}
+        valueLabelFormat={(value) => `$${value}`}
       />
       <Box sx={{ display: "flex", justifyContent: "space-between", mt: 1 }}>
-        <Typography variant="body2">${priceRange[0]}</Typography>
-        <Typography variant="body2">${priceRange[1]}</Typography>
+        <Typography variant="body2" color="text.secondary">${priceRange[0]}</Typography>
+        <Typography variant="body2" color="text.secondary">${priceRange[1]}</Typography>
       </Box>
       <Button
         variant="contained"
         fullWidth
-        sx={{ mt: 3 }}
-        onClick={() => setDrawerOpen(false)} // Closes drawer on mobile
+        sx={{ mt: 4 }}
+        onClick={() => setDrawerOpen(false)}
       >
         Apply Filters
       </Button>
@@ -602,7 +636,7 @@ const Products = () => {
                     No products found
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
-                    Try adjusting your filters or search to find what you’re
+                    Try adjusting your filters or search to find what you're
                     looking for.
                   </Typography>
                 </Box>

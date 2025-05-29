@@ -58,9 +58,8 @@ const Navbar = () => {
   const [notificationsMenu, setNotificationsMenu] = useState(null);
   const location = useLocation();
   const navigate = useNavigate();
-  const userParsed = JSON.parse(sessionStorage.getItem('user') || '{}');
+  const { user, isAuthenticated } = useUserAuth();
   const [countCart, setCountCart] = useState(0);
-  const { user } = useUserAuth();
 
   const isActiveRoute = (path) => location.pathname === path;
 
@@ -82,7 +81,7 @@ const Navbar = () => {
 
   const fetchCountCart = async () => {
     try {
-      const response = await axios.get(`http://localhost:5000/api/cart/count/${userParsed._id}`);
+      const response = await axios.get(`http://localhost:5000/api/cart/count/${user._id}`);
       setCountCart(response.data);
     } catch (error) {
       console.error('Error fetching cart count:', error);
@@ -298,7 +297,7 @@ const Navbar = () => {
                 >
                   <Box
                     component="img"
-                    src={userParsed.profilePicture ?? "./default.png"}
+                    src={user?.profilePicture ?? "./default.png"}
                     alt="user image"
                     sx={{
                       width: '40px',
@@ -307,11 +306,18 @@ const Navbar = () => {
                       objectFit: 'cover',
                       cursor: 'pointer',
                     }}
-                    onClick={() => {
-                      if (["artisan", "admin", "user"].includes(userParsed.role)) {
-                        window.location.href = "/artisan-dashboard";
-                      } else {
+                    onClick={(event) => {
+                      if (!user) {
                         setProfileMenu(event.currentTarget);
+                        return;
+                      }
+                      console.log('User role:', user.role);
+                      if (user.role === "customer") {
+                        navigate("/customer-dash");
+                      } else if (user.role === "artisan") {
+                        navigate("/artisan-dashboard");
+                      } else {
+                        navigate("/profile");
                       }
                     }}
                   />
@@ -420,6 +426,9 @@ const Navbar = () => {
                 <Typography variant="body2" color="text.secondary">
                   {user?.email}
                 </Typography>
+                <p className="text-gray-600">
+                  Artisan since {user?.createdAt ? user.createdAt.slice(0, 4) : 'N/A'}
+                </p>
               </Box>
             </Box>
             <Button

@@ -19,28 +19,24 @@ const userSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    enum: ["user", "admin", "artisan"],
-    default: "user",
+    enum: ["customer", "artisan"],
+    default: "customer",
     required: true,
-  },
-  isAdmin: {
-    type: Boolean,
-    required: true,
-    default: false,
   },
   profilePicture: {
     type: String,
+    default: './default.png',
   },
-  phoneNumber: {
+  phone: {
     type: String,
   },
   address: {
     type: String,
   },
-  bio: {
+  description: {
     type: String,
   },
-  // Extra artisan-related fields (optional)
+  // Extra artisan-related fields
   specialty: {
     type: String,
   },
@@ -57,10 +53,9 @@ const userSchema = new mongoose.Schema({
     twitter: { type: String },
     website: { type: String },
   },
-  // Email verification status
   isVerified: {
     type: Boolean,
-    default: true,
+    default: false,
   },
   verificationToken: { 
     type: String,
@@ -93,14 +88,31 @@ const User = mongoose.model("User", userSchema);
 // Validation function for incoming user data
 const validateData = (data) => {
   const schema = Joi.object({
-    name: Joi.string().required().label("User Name"),
+    name: Joi.string().required().label("Full Name"),
     email: Joi.string().email().required().label("Email"),
-    password: Joi.string().required().label("Password"),
-    isAdmin: Joi.boolean().default(false),
-    role: Joi.string().valid("user", "admin", "artisan").default("user"),
+    password: Joi.string().min(6).required().label("Password"),
+    role: Joi.string().valid("customer", "artisan").required().label("Role"),
+    profilePicture: Joi.string().optional(),
+    // Optional fields for artisan
+    phone: Joi.when('role', {
+      is: 'artisan',
+      then: Joi.string().required().label("Phone Number"),
+      otherwise: Joi.string().optional().allow(''),
+    }),
+    address: Joi.when('role', {
+      is: 'artisan',
+      then: Joi.string().required().label("Address"),
+      otherwise: Joi.string().optional().allow(''),
+    }),
+    description: Joi.when('role', {
+      is: 'artisan',
+      then: Joi.string().required().label("Description"),
+      otherwise: Joi.string().optional().allow(''),
+    }),
   });
   return schema.validate(data);
 };
 
 // Use ES module export
-export { User, validateData };
+export default mongoose.model("User", userSchema);
+export { validateData };

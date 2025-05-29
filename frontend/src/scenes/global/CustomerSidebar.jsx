@@ -4,7 +4,6 @@ import {
   LayoutDashboard,
   User,
   Heart,
-  Star,
   ShoppingBag,
   Menu,
   X,
@@ -12,10 +11,10 @@ import {
   Package,
   Settings,
   Bell,
+  Mail,
   ChevronRight,
   Sun,
   Moon,
-  Mail,
 } from "lucide-react";
 import {
   Box,
@@ -32,6 +31,7 @@ import {
   Button,
 } from "@mui/material";
 import { styled } from "@mui/system";
+import { useUserAuth } from '../../UserAuthContext'; // Adjust path as necessary
 
 // Constants
 const GRADIENT = "linear-gradient(45deg, #FFD700, #FF8C00)";
@@ -125,7 +125,7 @@ const ActionIcon = styled(IconButton)(({ theme }) => ({
 }));
 
 // Main Component
-export default function ArtisanSidebar() {
+export default function CustomerSidebar() { // Renamed component
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [darkMode, setDarkMode] = useState(false);
   const [profileAnchor, setProfileAnchor] = useState(null);
@@ -135,42 +135,35 @@ export default function ArtisanSidebar() {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const user = JSON.parse(sessionStorage.getItem("user")) || {
-    name: "Guest User",
-    email: "guest@example.com",
-    profilePicture: "/default.png",
-    role: "guest",
-  };
+  const { user, logout } = useUserAuth(); // Use useUserAuth for user and logout
 
   useEffect(() => {
-    setSidebarOpen(!isMobile);
-  }, [isMobile, location]);
+    document.title = 'Customer Dashboard'; // Updated title
+  }, []);
 
+  // Customer navigation items
   const navItems = [
-    { icon: LayoutDashboard, label: "Dashboard", path: "/artisan-dashboard", badge: 3 },
-    { icon: Package, label: "Products", path: "/my-products" },
-    { icon: User, label: "Profile", path: "/profile" },
-    { icon: Heart, label: "Favorites", path: "/favorites", badge: 5 },
-    { icon: Star, label: "Reviews", path: "/reviews", badge: 2 },
-    { icon: ShoppingBag, label: "Orders", path: "/orders", badge: 4 },
+    { icon: LayoutDashboard, label: "Dashboard", path: "/customer-dash" }, // Link to customer dashboard
+    { icon: ShoppingBag, label: "Orders", path: "/orders" },
     { icon: Mail, label: "Messages", path: "/messages" },
-  ].filter((item) => !(user.role === "user" && item.label === "Products"));
+    { icon: Heart, label: "Favorites", path: "/favorites" },
+    { icon: User, label: "Profile", path: "/profile" },
+    // Removed Artisan specific items like Products and Reviews
+  ];
 
   const handleLogout = () => {
-    sessionStorage.clear();
-    localStorage.clear();
+    logout(); // Use logout from context
     navigate("/login");
   };
 
   const renderNavItems = () =>
-    navItems.map(({ icon: Icon, label, path, badge }) => {
+    navItems.map(({ icon: Icon, label, path }) => { // Removed badge as it's not used for customer items yet
       const isActive = location.pathname === path;
       return (
         <SidebarItem key={path} to={path} active={isActive ? 1 : 0}>
           <Box display="flex" alignItems="center" gap={1}>
-            <Badge badgeContent={badge || 0} color="error">
-              <Icon size={20} />
-            </Badge>
+            {/* Removed Badge for now */}
+            <Icon size={20} />
             <Typography>{label}</Typography>
           </Box>
           {isActive && <ChevronRight size={16} />}
@@ -205,7 +198,7 @@ export default function ArtisanSidebar() {
           >
             <Box position="relative" mr={1.5}>
               <Avatar
-                src={user.profilePicture}
+                src={user?.profilePicture ?? "/default.png"}
                 sx={{
                   width: 48,
                   height: 48,
@@ -213,8 +206,8 @@ export default function ArtisanSidebar() {
                   boxShadow: '0 2px 8px rgba(255, 215, 0, 0.10)',
                 }}
               />
-              {/* Online status dot */}
-              <Box
+              {/* Online status dot - Removed for now as it's not a standard customer feature */}
+              {/* <Box
                 position="absolute"
                 bottom={2}
                 right={2}
@@ -224,14 +217,14 @@ export default function ArtisanSidebar() {
                 borderRadius="50%"
                 border="2px solid #fff"
                 boxShadow="0 0 0 2px #FFD700"
-              />
+              /> */}
             </Box>
             <Box flex={1} minWidth={0}>
               <Typography fontWeight={700} fontSize={16} noWrap sx={{ overflow: 'hidden', textOverflow: 'ellipsis', color: '#222' }}>
-                {user.name}
+                {user?.name || 'Guest'}
               </Typography>
               <Typography variant="caption" color="text.secondary" noWrap sx={{ fontSize: 13 }}>
-                {user.email}
+                {user?.email || 'guest@example.com'}
               </Typography>
             </Box>
             <ChevronRight size={18} color="#FF8C00" />
@@ -240,13 +233,13 @@ export default function ArtisanSidebar() {
           <Box mt={2} display="flex" width="100%" justifyContent="space-between">
             <Tooltip title="Notifications">
               <ActionIcon onClick={(e) => setNotifAnchor(e.currentTarget)}>
-                <Badge badgeContent={3} color="error">
+                <Badge badgeContent={0} color="error"> {/* Badge content set to 0 for now */}
                   <Bell size={20} />
                 </Badge>
               </ActionIcon>
             </Tooltip>
             <Tooltip title="Settings">
-              <ActionIcon>
+              <ActionIcon onClick={() => navigate('/settings')}> {/* Assuming a settings page */}
                 <Settings size={20} />
               </ActionIcon>
             </Tooltip>
@@ -279,17 +272,17 @@ export default function ArtisanSidebar() {
         </Box>
       </SidebarWrapper>
 
-      {/* Profile Menu */}
+      {/* Profile Menu - Simplified for Customer */}
       <MuiMenu
         anchorEl={profileAnchor}
         open={Boolean(profileAnchor)}
         onClose={() => setProfileAnchor(null)}
         PaperProps={{ sx: { borderRadius: 2, minWidth: 200 } }}
       >
-        <MenuItem onClick={() => setProfileAnchor(null)}>
+        <MenuItem onClick={() => {setProfileAnchor(null); navigate('/profile');}}>
           <User size={18} style={{ marginRight: 8 }} /> View Profile
         </MenuItem>
-        <MenuItem onClick={() => setProfileAnchor(null)}>
+         <MenuItem onClick={() => {setProfileAnchor(null); navigate('/settings');}}> {/* Link to settings */}
           <Settings size={18} style={{ marginRight: 8 }} /> Settings
         </MenuItem>
         <Divider />
@@ -304,7 +297,7 @@ export default function ArtisanSidebar() {
         </MenuItem>
       </MuiMenu>
 
-      {/* Notification Menu */}
+      {/* Notification Menu - Basic Placeholder */}
       <MuiMenu
         anchorEl={notifAnchor}
         open={Boolean(notifAnchor)}
@@ -317,10 +310,13 @@ export default function ArtisanSidebar() {
           </Typography>
         </Box>
         <Divider />
+        <Box px={2} py={1}>
+           <Typography variant="body2" color="text.secondary">No new notifications.</Typography>
+        </Box>
         <MenuItem onClick={() => setNotifAnchor(null)} sx={{ justifyContent: "center" }}>
           View All Notifications
         </MenuItem>
       </MuiMenu>
     </>
   );
-}
+} 

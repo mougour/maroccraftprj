@@ -1,5 +1,5 @@
 import express from "express";
-import { User } from "../models/user.js";
+import User from "../models/user.js";
 import Order from "../models/order.js"; 
 import ArtisanReview from "../models/artisanReview.js";
 const usersRouter = express.Router();

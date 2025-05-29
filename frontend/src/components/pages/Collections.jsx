@@ -1,80 +1,116 @@
-import { Container, Grid, Typography, Card, CardMedia, CardContent, Box, Button } from '@mui/material';
+import { Container, Grid, Typography, Card, CardMedia, CardContent, Box, Button, CircularProgress } from '@mui/material';
 import { ArrowRight } from 'lucide-react';
-import {useEffect}    from 'react';
-const collections = [
-  {
-    id: 1,
-    title: 'Minimalist Home',
-    image: 'https://images.unsplash.com/photo-1493809842364-78817add7ffb?auto=format&fit=crop&w=400',
-    items: 24,
-    description: 'Clean lines and simple forms for modern living spaces',
-  },
-  {
-    id: 2,
-    title: 'Rustic Charm',
-    image: 'https://images.unsplash.com/photo-1505691938895-1758d7feb511?auto=format&fit=crop&w=400',
-    items: 18,
-    description: 'Warm and inviting pieces with a traditional touch',
-  },
-  {
-    id: 3,
-    title: 'Coastal Living',
-    image: 'https://images.unsplash.com/photo-1505692952047-1a78307da8f2?auto=format&fit=crop&w=400',
-    items: 16,
-    description: 'Beach-inspired designs for a relaxed atmosphere',
-  },
-  {
-    id: 4,
-    title: 'Urban Jungle',
-    image: 'https://images.unsplash.com/photo-1545165375-1b744b9ed444?auto=format&fit=crop&w=400',
-    items: 20,
-    description: 'Nature-inspired pieces for city dwellers',
-  },
-];
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 
 const Collections = () => {
+  const navigate = useNavigate();
+  const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
   useEffect(() => {
-    document.title = 'Collections - MAROCRAFT';
+    document.title = 'Categories - MAROCRAFT';
+
+    const fetchCategories = async () => {
+      try {
+        const response = await axios.get('http://localhost:5000/api/categories');
+        setCategories(response.data);
+      } catch (err) {
+        console.error('Error fetching categories:', err);
+        setError('Failed to load categories.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCategories();
   }, []);
+
+  const handleCategoryClick = (category) => {
+    navigate(`/shop?category=${category.name}`);
+  };
+
+  if (loading) {
+    return (
+      <Container maxWidth="lg" sx={{ textAlign: 'center', mt: 8 }}>
+        <CircularProgress />
+        <Typography>Loading Categories...</Typography>
+      </Container>
+    );
+  }
+
+  if (error) {
+    return (
+      <Container maxWidth="lg" sx={{ textAlign: 'center', mt: 8 }}>
+        <Typography color="error">{error}</Typography>
+      </Container>
+    );
+  }
+
   return (
-    <Container maxWidth="lg">
-      <Box sx={{ mb: 6, textAlign: 'center' }}>
-        <Typography variant="h2" gutterBottom>
-          Curated Collections
+    <Container maxWidth="lg" sx={{ py: 8 }}>
+      <Box sx={{ mb: 8, textAlign: 'center' }}>
+        <Typography variant="h4" component="h1" gutterBottom fontWeight="normal" color="text.primary">
+          Explore Our Artisan Crafts
         </Typography>
-        <Typography variant="h5" color="text.secondary" sx={{ maxWidth: 600, mx: 'auto' }}>
-          Explore our thoughtfully curated collections of artisanal pieces
+        <Typography variant="h6" color="text.secondary" sx={{ maxWidth: 700, mx: 'auto' }}>
+          Discover unique handcrafted products from talented artisans across Morocco.
         </Typography>
       </Box>
 
       <Grid container spacing={4}>
-        {collections.map((collection) => (
-          <Grid item xs={12} sm={6} key={collection.id}>
-            <Card>
+        {categories.map((category) => (
+          <Grid item xs={12} sm={6} md={4} key={category._id}
+            sx={{
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
+            <Card
+              elevation={1}
+              sx={{
+                height: '100%',
+                minHeight: 100,
+                display: 'flex',
+                flexDirection: 'column',
+                transition: 'box-shadow 0.2s ease-in-out',
+                '&:hover': {
+                  boxShadow: 4,
+                  cursor: 'pointer'
+                },
+                borderRadius: 2,
+                overflow: 'hidden',
+              }}
+              onClick={() => handleCategoryClick(category)}
+            >
               <CardMedia
                 component="img"
-                height="300"
-                image={collection.image}
-                alt={collection.title}
+                height="333"
+                image={category.image || 'https://via.placeholder.com/400x250?text=No+Image'}
+                alt={category.name}
                 sx={{ objectFit: 'cover' }}
               />
-              <CardContent>
-                <Typography variant="h4" gutterBottom>
-                  {collection.title}
+              <CardContent sx={{ flexGrow: 1, p: 4 }}>
+                <Typography variant="h6" gutterBottom fontWeight="bold">
+                  {category.name}
                 </Typography>
-                <Typography variant="subtitle1" color="text.secondary" gutterBottom>
-                  {collection.items} Items
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                  {category.description}
                 </Typography>
-                <Typography variant="body1" sx={{ mb: 2 }}>
-                  {collection.description}
-                </Typography>
-                {/* <Button
+                <Button
                   variant="outlined"
                   color="primary"
                   endIcon={<ArrowRight size={20} />}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleCategoryClick(category);
+                  }}
+                  sx={{ mt: 'auto' }}
                 >
-                  View Collection
-                </Button> */}
+                  View Products
+                </Button>
               </CardContent>
             </Card>
           </Grid>

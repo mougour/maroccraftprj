@@ -1,6 +1,7 @@
 import express from "express";
 import { body, validationResult } from "express-validator";
 import Order from "../models/order.js";
+import Product from "../models/product.js";
 
 const orderRouter = express.Router();
 
@@ -39,7 +40,14 @@ orderRouter.get("/:id", async (req, res) => {
     try {
         const order = await Order.findById(req.params.id)
             .populate("customerId", "name email")
-            .populate("products.productId", "name price");
+            .populate({
+                path: "products.productId",
+                select: "name price user",
+                populate: {
+                    path: "user",
+                    select: "name email _id"
+                }
+            });
 
         if (!order) return res.status(404).json({ success: false, error: "Order not found" });
 
@@ -101,8 +109,8 @@ orderRouter.put(
         body("products").optional().isArray({ min: 1 }).withMessage("At least one product is required"),
         body("products.*.productId").optional().notEmpty().withMessage("Product ID is required"),
         body("products.*.quantity").optional().isInt({ min: 1 }).withMessage("Quantity must be at least 1"),
-        body("status").optional().isIn(["pending", "completed", "shipped", "cancelled"]).withMessage("Invalid status"),
         body("paymentStatus").optional().isIn(["paid", "pending", "failed"]).withMessage("Invalid payment status"),
+        body("shippingAddress").optional().notEmpty().withMessage("Shipping address is required"),
     ],
     async (req, res) => {
         const errors = validationResult(req);
@@ -114,13 +122,12 @@ orderRouter.put(
             const order = await Order.findById(req.params.id);
             if (!order) return res.status(404).json({ success: false, error: "Order not found" });
 
-            const { products, status, paymentStatus, shippingAddress } = req.body;
+            const { products, paymentStatus, shippingAddress } = req.body;
 
             if (products) {
                 order.products = products;
                 order.totalAmount = products.reduce((sum, item) => sum + item.price * item.quantity, 0);
             }
-            if (status) order.status = status;
             if (paymentStatus) order.paymentStatus = paymentStatus;
             if (shippingAddress) order.shippingAddress = shippingAddress;
 
@@ -164,4 +171,73 @@ orderRouter.get("/user/:userId", async (req, res) => {
         res.status(500).json({ success: false, error: error.message });
     }
 });
+
+// Add a new route to get orders for a specific artisan's products
+orderRouter.get("/artisan/:userId", async (req, res) => {
+  try {
+    const artisanId = req.params.userId;
+
+    // Find orders that contain products where the product's user matches the artisanId
+    // This involves looking into the 'products' array within each order
+    const orders = await Order.find({
+      "products.productId": { // Look into the products array
+        $in: await Product.find({ user: artisanId }).distinct('_id') // Find products by this artisan and get their IDs
+      }
+    })
+    .populate("customerId", "name email")  // Populate customer details
+    .populate("products.productId", "name price user") // Populate product details, including the user (artisan)
+    .sort({ orderDate: -1 });
+
+    // Although the query above finds orders containing the artisan's products,
+    // it might also return orders with other products. If you only want to show
+    // the items from this artisan within the order, you'd need further processing
+    // on the frontend or adjust the query/aggregation here.
+    // For simplicity, this query finds orders where at least one product is by the artisan.
+
+    // Optional: Filter out orders that somehow passed the query but have no products by the artisan
+    // This can happen if the product was deleted or the product's artisan changed.
+    const filteredOrders = orders.filter(order =>
+        order.products.some(item =>
+            item.productId && item.productId.user && item.productId.user.toString() === artisanId
+        )
+    );
+
+    res.json({ success: true, count: filteredOrders.length, orders: filteredOrders });
+  } catch (error) {
+    console.error("Error fetching artisan orders:", error);
+    res.status(500).json({ success: false, error: "Failed to fetch artisan orders." });
+  }
+});
+
+// Add a new route to update the status of an order
+orderRouter.put("/:id/status", [
+    body("status").notEmpty().withMessage("Status is required")
+                 .isIn(["pending", "shipped", "delivered", "cancelled"]).withMessage("Invalid status"),
+], async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).json({ success: false, errors: errors.array() });
+    }
+
+    try {
+        const order = await Order.findById(req.params.id);
+        if (!order) {
+            return res.status(404).json({ success: false, error: "Order not found" });
+        }
+
+        order.status = req.body.status;
+
+        // Assuming a 'deliveredAt' field needs to be set when status is 'delivered'
+        if (order.status === 'delivered') {
+            order.deliveredAt = new Date();
+        }
+
+        await order.save();
+        res.json({ success: true, message: "Order status updated successfully", order });
+    } catch (error) {
+        console.error("Error updating order status:", error);
+        res.status(500).json({ success: false, error: "Failed to update order status." });
+    }
+});
+
 export default orderRouter;

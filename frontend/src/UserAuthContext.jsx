@@ -7,11 +7,13 @@ const UserAuthContext = createContext({
   login: () => {},
   logout: () => {},
   updateProfilePicture: () => {},
+  isAuthenticated: false,
 });
 
 export const UserAuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   // Load user and token from sessionStorage on app start
   useEffect(() => {
@@ -19,29 +21,63 @@ export const UserAuthProvider = ({ children }) => {
       const storedUser = sessionStorage.getItem("user");
       const storedToken = sessionStorage.getItem("token");
       if (storedUser && storedToken) {
-        setUser(JSON.parse(storedUser));
+        const parsedUser = JSON.parse(storedUser);
+        setUser(parsedUser);
         setToken(storedToken);
+        setIsAuthenticated(true);
       }
     } catch (error) {
       console.error("Error loading user data:", error);
+      // Clear invalid data
+      sessionStorage.removeItem("user");
+      sessionStorage.removeItem("token");
     }
   }, []);
 
   // Login Function
   const login = (userData, authToken) => {
-    setUser(userData);
+    console.log('Login called with:', { userData, authToken });
+    if (!userData || !authToken) {
+      console.error('Invalid login data');
+      return;
+    }
+
+    // Ensure we have all required user data
+    const userToStore = {
+      _id: userData._id,
+      name: userData.name,
+      email: userData.email,
+      role: userData.role,
+      profilePicture: userData.profilePicture,
+      phone: userData.phone,
+      address: userData.address,
+      description: userData.description,
+    };
+
+    setUser(userToStore);
     setToken(authToken);
-    sessionStorage.setItem("user", JSON.stringify(userData));
+    setIsAuthenticated(true);
+
+    // Store in sessionStorage
+    sessionStorage.setItem("user", JSON.stringify(userToStore));
     sessionStorage.setItem("token", authToken);
+    
+    // Also store in localStorage for persistence
+    localStorage.setItem("user", JSON.stringify(userToStore));
+    localStorage.setItem("token", authToken);
   };
 
   // Logout Function
   const logout = () => {
     setUser(null);
     setToken(null);
+    setIsAuthenticated(false);
+    
+    // Clear from both storages
     sessionStorage.removeItem("user");
     sessionStorage.removeItem("token");
-    
+    localStorage.removeItem("user");
+    localStorage.removeItem("token");
   };
 
   // Update Profile Picture Function
@@ -50,11 +86,21 @@ export const UserAuthProvider = ({ children }) => {
       const updatedUser = { ...user, profilePicture: newImageUrl };
       setUser(updatedUser);
       sessionStorage.setItem("user", JSON.stringify(updatedUser));
+      localStorage.setItem("user", JSON.stringify(updatedUser));
     }
   };
 
   return (
-    <UserAuthContext.Provider value={{ user, token, login, logout, updateProfilePicture }}>
+    <UserAuthContext.Provider 
+      value={{ 
+        user, 
+        token, 
+        login, 
+        logout, 
+        updateProfilePicture,
+        isAuthenticated 
+      }}
+    >
       {children}
     </UserAuthContext.Provider>
   );
