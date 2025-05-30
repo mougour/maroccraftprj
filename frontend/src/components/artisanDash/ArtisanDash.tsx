@@ -21,6 +21,7 @@ const Dashboard = () => {
     totalSales: 0,
     completedOrders: 0,
     averageRating: 0,
+    productCount: 0,
   });
   const [orders, setOrders] = useState([]);
   const [reviews, setReviews] = useState([]);
@@ -40,6 +41,7 @@ const Dashboard = () => {
         const response = await axios.get(
           `http://localhost:5000/api/users/stats/${user._id}`
         );
+        console.log('Received stats:', response.data);
         setStats(response.data);
       } catch (error) {
         console.error('Error fetching stats:', error);
@@ -104,15 +106,15 @@ const Dashboard = () => {
       value: `$${stats.totalSales}`,
       icon: DollarSign,
       color: 'bg-amber-500',
-      trend: '+12.5%',
+      trend: '',
       textColor: 'text-amber-500',
     },
     {
-      label: 'Completed Orders',
+      label: 'Delivered Orders',
       value: stats.completedOrders,
       icon: Package,
       color: 'bg-emerald-500',
-      trend: '+3',
+      trend: '',
       textColor: 'text-emerald-500',
     },
     {
@@ -120,15 +122,15 @@ const Dashboard = () => {
       value: (stats?.averageRating ?? 0).toFixed(1) + ' ★',
       icon: Star,
       color: 'bg-blue-500',
-      trend: reviews.length ? `+${reviews.length}` : '',
+      trend: '',
       textColor: 'text-blue-500',
     },
     {
-      label: 'Products',
-      value: '56',
+      label: 'Products Listed',
+      value: stats.productCount ?? 0,
       icon: ShoppingBag,
       color: 'bg-purple-500',
-      trend: '+5',
+      trend: '',
       textColor: 'text-purple-500',
     },
   ];

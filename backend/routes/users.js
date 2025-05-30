@@ -57,33 +57,77 @@ usersRouter.get("/stats/:id", async (req, res) => {
 
     if (!user) return res.status(404).json({ error: "User not found" });
 
-    // Use the correct field "customerId" from Order schema
-    const completedOrders = await Order.countDocuments({ customerId: userId, status: "pending" });
+    // Find orders that contain products belonging to this artisan and have 'delivered' status
+    const completedOrders = await Order.countDocuments({
+      "products.productId": { 
+        $in: await Product.find({ user: userId }).distinct('_id')
+      },
+      status: "delivered"
+    });
 
-    // Average rating from reviews
-    const reviews = await ArtisanReview.find({ artisanId: userId });
-    const averageRating = reviews.length > 0 
-      ? reviews.reduce((acc, review) => acc + review.rating, 0) 
-      : 0;
-    // Total sales: use "totalAmount" field from Order schema
-    const totalSales = await Order.aggregate([
-      { $match: { customerId: userId, status: "pending" } },
-      { $group: { _id: null, total: { $sum: "$totalAmount" } } }
+    // Calculate average rating from reviews for the artisan's products
+    const reviews = await ArtisanReview.aggregate([
+      { $match: { artisanId: new mongoose.Types.ObjectId(userId) } }, // Match reviews for this artisan
+      { $group: { _id: null, average: { $avg: "$rating" } } }
     ]);
-    
+    const averageRating = reviews[0] ? reviews[0].average : 0;
+
+    // Total sales: use "totalAmount" field from Order schema and filter by artisan products
+    // Calculate total sales from delivered orders containing the artisan's products
+    const totalSalesResult = await Order.aggregate([
+      {
+        $match: {
+          status: "delivered",
+          "products.productId": {
+            $in: await Product.find({ user: userId }).distinct('_id')
+          }
+        }
+      },
+      {
+        $unwind: "$products" // Split the products array into individual documents
+      },
+      {
+        $lookup: {
+          from: "products",
+          localField: "products.productId",
+          foreignField: "_id",
+          as: "productDetails"
+        }
+      },
+      {
+        $match: {
+          "productDetails.user": new mongoose.Types.ObjectId(userId)
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          total: {
+            $sum: { $multiply: ["$products.price", "$products.quantity"] }
+          }
+        }
+      }
+    ]);
+    const totalSales = totalSalesResult[0] ? totalSalesResult[0].total : 0;
+
+    // Get product count for the artisan
+    const productCount = await Product.countDocuments({ user: userId });
+
     res.json({
       completedOrders,
-      averageRating: averageRating / reviews.length,
-      totalSales: totalSales[0] ? totalSales[0].total : 0
+      averageRating: averageRating,
+      totalSales: totalSales,
+      productCount // Include product count
     });
   } catch (error) {
+    console.error('Error fetching artisan stats:', error.stack || error);
     res.status(500).json({ error: error.message });
   }
 });
 
 usersRouter.get("/artisans", async (req, res) => {
   try {
-    const artisans = await User.find({ role: 'artisan' });
+    const artisans = await User.find({ role: 'artisan' }).select('-password'); // Exclude passwords
     res.json({ artisans });
   } catch (error) {
     console.error('Error fetching artisans:', error.stack || error);
