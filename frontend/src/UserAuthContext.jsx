@@ -4,9 +4,9 @@ import { createContext, useContext, useEffect, useState } from "react";
 const UserAuthContext = createContext({
   user: null,
   token: null,
-  login: () => {},
+  login: (userData, authToken) => {},
   logout: () => {},
-  updateProfilePicture: () => {},
+  updateProfilePicture: (newImageUrl) => {},
   isAuthenticated: false,
 });
 

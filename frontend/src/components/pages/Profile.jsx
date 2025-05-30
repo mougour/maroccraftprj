@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Box, Typography, Avatar, Paper, Grid, Button, TextField } from '@mui/material';
+import { Box, Typography, Avatar, Paper, Grid, Button, TextField, Select, MenuItem, FormControl, InputLabel, Chip, OutlinedInput } from '@mui/material';
 import { useUserAuth } from '../../UserAuthContext';
 import axios from 'axios';
 import toast from 'react-hot-toast';
@@ -16,7 +16,7 @@ const Profile = () => {
     phoneNumber: '',
     address: '',
     bio: '',
-    specialty: '',
+    specialties: [], // Change from specialty (string) to specialties (array)
     instagram: '',
     twitter: '',
     website: ''
@@ -25,6 +25,7 @@ const Profile = () => {
   const [profilePicture, setProfilePicture] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [categories, setCategories] = useState([]); // Add state for fetched categories
 
   useEffect(() => {
     if (user) {
@@ -34,7 +35,7 @@ const Profile = () => {
         phoneNumber: user.phoneNumber || '',
         address: user.address || '',
         bio: user.bio || '',
-        specialty: user.specialty || '',
+        specialties: user.specialties || [], // Initialize specialties as an array
         instagram: user.socialLinks?.instagram || '',
         twitter: user.socialLinks?.twitter || '',
         website: user.socialLinks?.website || ''
@@ -43,9 +44,32 @@ const Profile = () => {
     }
   }, [user]);
 
+  // Fetch categories on component mount
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await axios.get('http://localhost:5000/api/categories');
+        setCategories(response.data); // Assuming response.data is an array of categories
+      } catch (error) {
+        console.error('Error fetching categories:', error);
+        toast.error('Failed to load categories.');
+      }
+    };
+    fetchCategories();
+  }, []);
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  // Handle specialties selection
+  const handleSpecialtiesChange = (event) => {
+    const { value } = event.target;
+    setFormData((prev) => ({
+      ...prev,
+      specialties: typeof value === 'string' ? value.split(',') : value, // Handle string or array value
+    }));
   };
 
   const handlePasswordChange = (e) => {
@@ -68,12 +92,7 @@ const Profile = () => {
       const response = await axios.post(
         `http://localhost:5000/api/profile/upload/${user._id}`,
         form,
-        {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-            Authorization: `Bearer ${token}`,
-          },
-        }
+        { headers: { 'Content-Type': 'multipart/form-data', Authorization: `Bearer ${token}` } }
       );
 
       const imageUrl = response.data.imageUrl;
@@ -97,12 +116,16 @@ const Profile = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      const updateData = { ...formData };
+      const updateData = {
+        ...formData,
+        specialties: formData.specialties // Ensure specialties array is included
+      };
       if (password) {
         updateData.password = password;
       }
+      // Note: The backend route for updating users might need to handle the specialties array
       const response = await axios.put(
-        `http://localhost:5000/api/register/${user?._id}`,
+        `http://localhost:5000/api/users/${user?._id}`, // Corrected endpoint to /api/users/:id
         updateData,
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -123,7 +146,7 @@ const Profile = () => {
         phoneNumber: user.phoneNumber || '',
         address: user.address || '',
         bio: user.bio || '',
-        specialty: user.specialty || '',
+        specialties: user.specialties || [],
         instagram: user.socialLinks?.instagram || '',
         twitter: user.socialLinks?.twitter || '',
         website: user.socialLinks?.website || ''
@@ -205,7 +228,7 @@ const Profile = () => {
                 value={formData.email}
                 onChange={handleInputChange}
                 fullWidth
-                disabled // Email is often not editable
+                disabled
               />
             </Grid>
             <Grid item xs={12} sm={6}>
@@ -237,74 +260,80 @@ const Profile = () => {
                 fullWidth
               />
             </Grid>
-
+            <Grid item xs={12}>
+              <TextField
+                label="Address"
+                name="address"
+                value={formData.address}
+                onChange={handleInputChange}
+                fullWidth
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                label="Bio"
+                name="bio"
+                value={formData.bio}
+                onChange={handleInputChange}
+                fullWidth
+                multiline
+                rows={4}
+              />
+            </Grid>
             {user.role === 'artisan' && (
-              <>
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    label="Specialty"
-                    name="specialty"
-                    value={formData.specialty}
-                    onChange={handleInputChange}
-                    fullWidth
-                  />
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    label="Address"
-                    name="address"
-                    value={formData.address}
-                    onChange={handleInputChange}
-                    fullWidth
-                    multiline
-                    rows={2}
-                  />
-                </Grid>
-                <Grid item xs={12}>
-                  <TextField
-                    label="Bio"
-                    name="bio"
-                    value={formData.bio}
-                    onChange={handleInputChange}
-                    fullWidth
-                    multiline
-                    rows={4}
-                  />
-                </Grid>
-                 <Grid item xs={12}>
-                  <Typography variant="h6" fontWeight={600} mt={2} mb={1}>Social Links</Typography>
-                  <Grid container spacing={2}>
-                    <Grid item xs={12} sm={4}>
-                      <TextField
-                        label="Instagram"
-                        name="instagram"
-                        value={formData.instagram}
-                        onChange={handleInputChange}
-                        fullWidth
-                      />
-                    </Grid>
-                    <Grid item xs={12} sm={4}>
-                       <TextField
-                        label="Twitter"
-                        name="twitter"
-                        value={formData.twitter}
-                        onChange={handleInputChange}
-                        fullWidth
-                      />
-                    </Grid>
-                    <Grid item xs={12} sm={4}>
-                       <TextField
-                        label="Website"
-                        name="website"
-                        value={formData.website}
-                        onChange={handleInputChange}
-                        fullWidth
-                      />
-                    </Grid>
-                  </Grid>
-                </Grid>
-              </>
+              <Grid item xs={12}>
+                <FormControl fullWidth>
+                  <InputLabel id="specialties-label">Specialties</InputLabel>
+                  <Select
+                    labelId="specialties-label"
+                    multiple
+                    value={formData.specialties}
+                    onChange={handleSpecialtiesChange}
+                    input={<OutlinedInput label="Specialties" />}
+                    renderValue={(selected) => (
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                        {selected.map((value) => (
+                          <Chip key={value} label={value} />
+                        ))}
+                      </Box>
+                    )}
+                  >
+                    {categories.map((category) => (
+                      <MenuItem key={category._id} value={category.name}>
+                        {category.name}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
             )}
+            <Grid item xs={12} sm={4}>
+              <TextField
+                label="Instagram"
+                name="instagram"
+                value={formData.instagram}
+                onChange={handleInputChange}
+                fullWidth
+              />
+            </Grid>
+            <Grid item xs={12} sm={4}>
+               <TextField
+                label="Twitter"
+                name="twitter"
+                value={formData.twitter}
+                onChange={handleInputChange}
+                fullWidth
+              />
+            </Grid>
+            <Grid item xs={12} sm={4}>
+               <TextField
+                label="Website"
+                name="website"
+                value={formData.website}
+                onChange={handleInputChange}
+                fullWidth
+              />
+            </Grid>
 
             <Grid item xs={12} display="flex" justifyContent="flex-end" gap={2}>
               <Button variant="outlined" onClick={handleCancel} disabled={loading}>Cancel</Button>
@@ -319,4 +348,4 @@ const Profile = () => {
   );
 };
 
-export default Profile; 
+export default Profile;

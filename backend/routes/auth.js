@@ -63,14 +63,15 @@ router.post("/register", upload.single('profilePicture'), async (req, res) => {
 
     // Add artisan-specific fields if role is artisan
     if (req.body.role === 'artisan') {
-      if (!req.body.phone || !req.body.address || !req.body.description) {
+      if (!req.body.phone || !req.body.address || !req.body.description || !req.body.specialties) {
         return res.status(400).json({ 
-          error: "Artisan registration requires phone, address, and description" 
+          error: "Artisan registration requires phone, address, description, and specialties" 
         });
       }
       userData.phone = req.body.phone;
       userData.address = req.body.address;
       userData.description = req.body.description;
+      userData.specialties = req.body.specialties;
     }
 
     console.log('Creating user with data:', {
@@ -96,6 +97,7 @@ router.post("/register", upload.single('profilePicture'), async (req, res) => {
       address: user.address,
       description: user.description,
       profilePicture: user.profilePicture,
+      specialties: user.specialties,
       token,
     });
   } catch (error) {

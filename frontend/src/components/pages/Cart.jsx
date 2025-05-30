@@ -228,6 +228,15 @@ const Cart = () => {
           mb: 2,
           overflow: 'visible',
           p: 2,
+          border: '1px solid #e0e0e0',
+          borderRadius: 2,
+          boxShadow: 1,
+          transition: 'box-shadow 0.2s, border-color 0.2s',
+          '&:hover': {
+            boxShadow: 4,
+            borderColor: '#ff9800',
+          },
+          background: '#fcfcfc',
         }}
         variant="outlined"
       >
@@ -515,132 +524,134 @@ const Cart = () => {
   const isLastStep = activeStep === 2;
 
   return (
-    <Container maxWidth="lg" sx={{ py: 4, mt: 8 }}>
-      {/* Stepper */}
-      <Box sx={{ mb: 4 }}>
-        <Stepper activeStep={activeStep} alternativeLabel>
-          {steps.map((label) => (
-            <Step key={label}>
-              <StepLabel>{label}</StepLabel>
-            </Step>
-          ))}
-        </Stepper>
-      </Box>
+    <Box sx={{ bgcolor: '#f7f8fa', minHeight: '100vh', py: 6 }}>
+      <Container maxWidth="lg" sx={{ py: 4, mt: 8, boxShadow: 3, borderRadius: 4, bgcolor: '#fff' }}>
+        {/* Stepper */}
+        <Box sx={{ mb: 4 }}>
+          <Stepper activeStep={activeStep} alternativeLabel>
+            {steps.map((label) => (
+              <Step key={label}>
+                <StepLabel>{label}</StepLabel>
+              </Step>
+            ))}
+          </Stepper>
+        </Box>
 
-      <Grid container spacing={4}>
-        <Grid item xs={12} md={8}>
-          {renderStepContent(activeStep)}
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 4 }}>
-            <Button
-              variant="outlined"
-              disabled={activeStep === 0}
-              onClick={handleBack}
-              startIcon={<ArrowLeft />}
-            >
-              Back
-            </Button>
-            <Button
-              variant="contained"
-              color="primary"
-              onClick={isLastStep ? handlePlaceOrder : handleNext}
-              disabled={activeStep === 0 && items.length === 0}
-              startIcon={isLastStep ? null : null}
-            >
-              {isLastStep ? 'Place Order' : 'Next'}
-            </Button>
-          </Box>
-        </Grid>
-
-        <Grid item xs={12} md={4}>
-          <Paper sx={{ p: 3, position: 'sticky', top: 100 }}>
-            <Typography variant="h6" gutterBottom>
-              Order Summary
-            </Typography>
-            <Box sx={{ my: 3 }}>
-              <Grid container spacing={2}>
-                <Grid item xs={6}>
-                  <Typography color="text.secondary">Subtotal</Typography>
-                </Grid>
-                <Grid item xs={6} sx={{ textAlign: 'right' }}>
-                  <Typography>${subtotal.toFixed(2)}</Typography>
-                </Grid>
-                <Grid item xs={6}>
-                  <Typography color="text.secondary">Shipping</Typography>
-                </Grid>
-                <Grid item xs={6} sx={{ textAlign: 'right' }}>
-                  <Typography>
-                    {shipping === 0 ? 'Free' : `$${shipping.toFixed(2)}`}
-                  </Typography>
-                </Grid>
-                {promoApplied && (
-                  <>
-                    <Grid item xs={6}>
-                      <Typography color="success.main">Discount</Typography>
-                    </Grid>
-                    <Grid item xs={6} sx={{ textAlign: 'right' }}>
-                      <Typography color="success.main">
-                        -${discount.toFixed(2)}
-                      </Typography>
-                    </Grid>
-                  </>
-                )}
-              </Grid>
-              <Box sx={{ mt: 3 }}>
-                <TextField
-                  fullWidth
-                  size="small"
-                  label="Promo Code"
-                  value={promoCode}
-                  onChange={(e) => setPromoCode(e.target.value)}
-                  sx={{ mb: 1 }}
-                />
-                <Button
-                  variant="outlined"
-                  fullWidth
-                  onClick={handlePromoCode}
-                  disabled={promoApplied}
-                >
-                  Apply
-                </Button>
-                {promoApplied && (
-                  <Alert severity="success" sx={{ mt: 1 }}>
-                    Promo code applied successfully!
-                  </Alert>
-                )}
-              </Box>
-              <Divider sx={{ my: 3 }} />
-              <Grid container alignItems="center">
-                <Grid item xs={6}>
-                  <Typography variant="h6">Total</Typography>
-                </Grid>
-                <Grid item xs={6} sx={{ textAlign: 'right' }}>
-                  <Typography variant="h6">${total.toFixed(2)}</Typography>
-                </Grid>
-              </Grid>
-            </Box>
-            {activeStep === 0 && (
+        <Grid container spacing={4}>
+          <Grid item xs={12} md={8}>
+            {renderStepContent(activeStep)}
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 4 }}>
+              <Button
+                variant="outlined"
+                disabled={activeStep === 0}
+                onClick={handleBack}
+                startIcon={<ArrowLeft />}
+              >
+                Back
+              </Button>
               <Button
                 variant="contained"
                 color="primary"
-                fullWidth
-                size="large"
-                disabled={items.length === 0}
-                sx={{ mb: 2 }}
-                onClick={handleNext}
+                onClick={isLastStep ? handlePlaceOrder : handleNext}
+                disabled={activeStep === 0 && items.length === 0}
+                startIcon={isLastStep ? null : null}
               >
-                Proceed to Checkout
+                {isLastStep ? 'Place Order' : 'Next'}
               </Button>
-            )}
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Truck size={20} />
-              <Typography variant="body2" color="text.secondary">
-                Free shipping on orders over $100
-              </Typography>
             </Box>
-          </Paper>
+          </Grid>
+
+          <Grid item xs={12} md={4}>
+            <Paper sx={{ p: 3, position: 'sticky', top: 100, borderRadius: 3, boxShadow: 4, bgcolor: '#f9fafb', border: '1px solid #e0e0e0' }}>
+              <Typography variant="h6" gutterBottom fontWeight="bold">
+                Order Summary
+              </Typography>
+              <Box sx={{ my: 3 }}>
+                <Grid container spacing={2}>
+                  <Grid item xs={6}>
+                    <Typography color="text.secondary">Subtotal</Typography>
+                  </Grid>
+                  <Grid item xs={6} sx={{ textAlign: 'right' }}>
+                    <Typography>${subtotal.toFixed(2)}</Typography>
+                  </Grid>
+                  <Grid item xs={6}>
+                    <Typography color="text.secondary">Shipping</Typography>
+                  </Grid>
+                  <Grid item xs={6} sx={{ textAlign: 'right' }}>
+                    <Typography>
+                      {shipping === 0 ? 'Free' : `$${shipping.toFixed(2)}`}
+                    </Typography>
+                  </Grid>
+                  {promoApplied && (
+                    <>
+                      <Grid item xs={6}>
+                        <Typography color="success.main">Discount</Typography>
+                      </Grid>
+                      <Grid item xs={6} sx={{ textAlign: 'right' }}>
+                        <Typography color="success.main">
+                          -${discount.toFixed(2)}
+                        </Typography>
+                      </Grid>
+                    </>
+                  )}
+                </Grid>
+                <Box sx={{ mt: 3 }}>
+                  <TextField
+                    fullWidth
+                    size="small"
+                    label="Promo Code"
+                    value={promoCode}
+                    onChange={(e) => setPromoCode(e.target.value)}
+                    sx={{ mb: 1 }}
+                  />
+                  <Button
+                    variant="outlined"
+                    fullWidth
+                    onClick={handlePromoCode}
+                    disabled={promoApplied}
+                  >
+                    Apply
+                  </Button>
+                  {promoApplied && (
+                    <Alert severity="success" sx={{ mt: 1 }}>
+                      Promo code applied successfully!
+                    </Alert>
+                  )}
+                </Box>
+                <Divider sx={{ my: 3 }} />
+                <Grid container alignItems="center">
+                  <Grid item xs={6}>
+                    <Typography variant="h6">Total</Typography>
+                  </Grid>
+                  <Grid item xs={6} sx={{ textAlign: 'right' }}>
+                    <Typography variant="h6">${total.toFixed(2)}</Typography>
+                  </Grid>
+                </Grid>
+              </Box>
+              {activeStep === 0 && (
+                <Button
+                  variant="contained"
+                  color="primary"
+                  fullWidth
+                  size="large"
+                  disabled={items.length === 0}
+                  sx={{ mb: 2, borderRadius: 2, boxShadow: 2 }}
+                  onClick={handleNext}
+                >
+                  Proceed to Checkout
+                </Button>
+              )}
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 2 }}>
+                <Truck size={20} />
+                <Typography variant="body2" color="text.secondary">
+                  Free shipping on orders over $100
+                </Typography>
+              </Box>
+            </Paper>
+          </Grid>
         </Grid>
-      </Grid>
-    </Container>
+      </Container>
+    </Box>
   );
 };
 

@@ -142,17 +142,20 @@ export default function ArtisanSidebar() {
     role: "guest",
   };
 
+  // Mock unread messages count (replace with real API call if available)
+  const [unreadMessagesCount, setUnreadMessagesCount] = useState(2); // Example: 2 unread
+
   useEffect(() => {
     setSidebarOpen(!isMobile);
   }, [isMobile, location]);
 
   const navItems = [
-    { icon: LayoutDashboard, label: "Dashboard", path: "/artisan-dashboard", badge: 3 },
+    { icon: LayoutDashboard, label: "Dashboard", path: "/artisan-dashboard" },
     { icon: Package, label: "Products", path: "/my-products" },
     { icon: User, label: "Profile", path: "/profile" },
-    { icon: Heart, label: "Favorites", path: "/favorites", badge: 5 },
-    { icon: Star, label: "Reviews", path: "/reviews", badge: 2 },
-    { icon: ShoppingBag, label: "Orders", path: "/orders", badge: 4 },
+    { icon: Heart, label: "Favorites", path: "/favorites" },
+    { icon: Star, label: "Reviews", path: "/reviews" },
+    { icon: ShoppingBag, label: "Orders", path: "/orders" },
     { icon: Mail, label: "Messages", path: "/messages" },
   ].filter((item) => !(user.role === "user" && item.label === "Products"));
 
@@ -168,9 +171,7 @@ export default function ArtisanSidebar() {
       return (
         <SidebarItem key={path} to={path} active={isActive ? 1 : 0}>
           <Box display="flex" alignItems="center" gap={1}>
-            <Badge badgeContent={badge || 0} color="error">
-              <Icon size={20} />
-            </Badge>
+            <Icon size={20} />
             <Typography>{label}</Typography>
           </Box>
           {isActive && <ChevronRight size={16} />}
@@ -240,13 +241,11 @@ export default function ArtisanSidebar() {
           <Box mt={2} display="flex" width="100%" justifyContent="space-between">
             <Tooltip title="Notifications">
               <ActionIcon onClick={(e) => setNotifAnchor(e.currentTarget)}>
-                <Badge badgeContent={3} color="error">
-                  <Bell size={20} />
-                </Badge>
+                <Bell size={20} />
               </ActionIcon>
             </Tooltip>
             <Tooltip title="Settings">
-              <ActionIcon>
+              <ActionIcon onClick={() => navigate('/profile')}>
                 <Settings size={20} />
               </ActionIcon>
             </Tooltip>

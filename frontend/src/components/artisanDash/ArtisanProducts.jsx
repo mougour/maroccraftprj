@@ -35,7 +35,7 @@ import toast from 'react-hot-toast';
 // ----------------------------------
 // ProductCard Component
 // ----------------------------------
-function ProductCard({ product, onEdit, onDelete }) {
+function ProductCard({ product, onEdit, onDelete, onCardClick }) {
   return (
     <Card
       elevation={3}
@@ -45,10 +45,12 @@ function ProductCard({ product, onEdit, onDelete }) {
         '&:hover': {
           transform: 'scale(1.02)',
           boxShadow: 6,
+          cursor: 'pointer',
         },
         display: 'flex',
         flexDirection: 'column',
       }}
+      onClick={onCardClick}
     >
       <CardMedia
         component="img"
@@ -112,10 +114,10 @@ function ProductCard({ product, onEdit, onDelete }) {
       </CardContent>
 
       <CardActions sx={{ justifyContent: 'flex-end', p: 1 }}>
-        <IconButton onClick={onEdit} color="primary" size="small">
+        <IconButton onClick={e => { e.stopPropagation(); onEdit(); }} color="primary" size="small">
           <Edit size={18} />
         </IconButton>
-        <IconButton onClick={onDelete} color="error" size="small">
+        <IconButton onClick={e => { e.stopPropagation(); onDelete(); }} color="error" size="small">
           <Trash2 size={18} />
         </IconButton>
       </CardActions>
@@ -384,6 +386,7 @@ const UserDash = () => {
                       setOpenEditDialog(true);
                     }}
                     onDelete={() => handleDelete(product._id)}
+                    onCardClick={() => navigate(`/products/${product._id}`)}
                   />
                 </Grid>
               ))}

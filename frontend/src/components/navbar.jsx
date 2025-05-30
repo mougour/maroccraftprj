@@ -36,6 +36,7 @@ import {
   X,
   ChevronRight,
   Bell,
+  Star,
 } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
@@ -60,6 +61,8 @@ const Navbar = () => {
   const navigate = useNavigate();
   const { user, isAuthenticated } = useUserAuth();
   const [countCart, setCountCart] = useState(0);
+  const [notifications, setNotifications] = useState(null);
+  const [loadingNotifications, setLoadingNotifications] = useState(false);
 
   const isActiveRoute = (path) => location.pathname === path;
 
@@ -81,16 +84,32 @@ const Navbar = () => {
 
   const fetchCountCart = async () => {
     try {
-      const response = await axios.get(`http://localhost:5000/api/cart/count/${user._id}`);
-      setCountCart(response.data);
+      if (user && user._id) {
+        const response = await axios.get(`http://localhost:5000/api/cart/count/${user._id}`);
+        setCountCart(response.data);
+      }
     } catch (error) {
       console.error('Error fetching cart count:', error);
     }
   };
 
   useEffect(() => {
-    fetchCountCart();
-  }, []);
+    if (isAuthenticated && user && user._id) {
+      fetchCountCart();
+    }
+  }, [isAuthenticated, user]);
+
+  useEffect(() => {
+    if (isAuthenticated && user && user._id) {
+      setLoadingNotifications(true);
+      axios.get(`http://localhost:5000/api/users/notifications/${user._id}`)
+        .then(res => setNotifications(res.data))
+        .catch(() => setNotifications(null))
+        .finally(() => setLoadingNotifications(false));
+    } else {
+      setNotifications(null);
+    }
+  }, [isAuthenticated, user]);
 
   const handleLogout = () => {
     handleProfileClose();
@@ -107,7 +126,7 @@ const Navbar = () => {
   const navItems = [
     { path: '/shop', label: 'Shop' },
     { path: '/collections', label: 'Collections' },
-    { path: '/about', label: 'About' },
+    { path: user?.role === 'customer' ? '/artisans' : '/about', label: user?.role === 'customer' ? 'Artisans' : 'About' },
   ];
 
   return (
@@ -281,15 +300,32 @@ const Navbar = () => {
                 </IconButton>
 
                 {/* Notifications */}
-                <IconButton
-                  onClick={handleNotificationsClick}
-                  sx={{ 
-                    padding: { xs: '6px', sm: '8px' },
-                    display: { xs: 'none', sm: 'flex' }
-                  }}
-                >
-                  <Bell size={20} />
-                </IconButton>
+                {user && (
+                  <IconButton 
+                    color={isActiveRoute('/notifications') ? 'primary' : 'default'}
+                    sx={{ 
+                      color: isActiveRoute('/notifications') ? '#FFD700' : '#333',
+                      padding: { xs: '6px', sm: '8px' },
+                      '&:hover': {
+                        backgroundColor: 'rgba(255, 215, 0, 0.08)',
+                        color: '#FFD700',
+                      },
+                    }}
+                    onClick={handleNotificationsClick}
+                  >
+                    <Badge color="error" badgeContent={
+                      notifications ? (
+                        user.role === 'artisan' ? (
+                          (notifications.unreadMessages || 0) + (notifications.newOrders || 0) + (notifications.newReviews || 0)
+                        ) : (
+                          (notifications.unreadMessages || 0) + (notifications.orderUpdates || 0) + (notifications.promotions || 0)
+                        )
+                      ) : 0
+                    }>
+                      <Bell size={20} />
+                    </Badge>
+                  </IconButton>
+                )}
                 
                 {/* Profile Menu */}
                 <IconButton 
@@ -481,6 +517,54 @@ const Navbar = () => {
           </Box>
         </Box>
       </Drawer>
+
+      {/* Notifications Dropdown */}
+      <Menu
+        anchorEl={notificationsMenu}
+        open={Boolean(notificationsMenu)}
+        onClose={handleNotificationsClose}
+        PaperProps={{ sx: { borderRadius: 2, minWidth: 320 } }}
+      >
+        {loadingNotifications ? (
+          <MenuItem disabled>Loading notifications...</MenuItem>
+        ) : notifications ? (
+          <>
+            {user.role === 'artisan' ? (
+              <>
+                <MenuItem onClick={() => { handleNotificationsClose(); navigate('/messages'); }}>
+                  <ListItemIcon><Bell size={18} /></ListItemIcon>
+                  <ListItemText primary={`New Messages (${notifications.unreadMessages || 0})`} />
+                </MenuItem>
+                <MenuItem onClick={() => { handleNotificationsClose(); navigate('/orders'); }}>
+                  <ListItemIcon><Package size={18} /></ListItemIcon>
+                  <ListItemText primary={`New Orders (${notifications.newOrders || 0})`} />
+                </MenuItem>
+                <MenuItem onClick={() => { handleNotificationsClose(); navigate('/reviews'); }}>
+                  <ListItemIcon><Star size={18} /></ListItemIcon>
+                  <ListItemText primary={`New Reviews (${notifications.newReviews || 0})`} />
+                </MenuItem>
+              </>
+            ) : (
+              <>
+                <MenuItem onClick={() => { handleNotificationsClose(); navigate('/messages'); }}>
+                  <ListItemIcon><Bell size={18} /></ListItemIcon>
+                  <ListItemText primary={`New Messages (${notifications.unreadMessages || 0})`} />
+                </MenuItem>
+                <MenuItem onClick={() => { handleNotificationsClose(); navigate('/orders'); }}>
+                  <ListItemIcon><Package size={18} /></ListItemIcon>
+                  <ListItemText primary={`Order Updates (${notifications.orderUpdates || 0})`} />
+                </MenuItem>
+                <MenuItem onClick={() => { handleNotificationsClose(); navigate('/promotions'); }}>
+                  <ListItemIcon><Star size={18} /></ListItemIcon>
+                  <ListItemText primary={`Promotions (${notifications.promotions || 0})`} />
+                </MenuItem>
+              </>
+            )}
+          </>
+        ) : (
+          <MenuItem disabled>No new notifications.</MenuItem>
+        )}
+      </Menu>
     </>
   );
 };

@@ -15,6 +15,7 @@ import {
   Fade,
   Skeleton,
   Tooltip,
+  CircularProgress,
 } from "@mui/material";
 import {
   Heart,
@@ -30,6 +31,7 @@ import axios from "axios";
 import toast from "react-hot-toast";
 import { tokens } from "../../theme";
 import { useTheme } from "@emotion/react";
+import Collections from "./Collections";
 
 /** Hero Banner Component */
 const HeroBanner = () => {
@@ -325,7 +327,7 @@ const ProductSection = ({
   return (
     <Box my={4}>
       <Box className="flex flex-wrap justify-between items-center mb-3 gap-2">
-        <Typography variant="h4" className="text-gray-800 font-bold">
+        <Typography variant="h4" className="text-gray-800 font-bold" fontWeight="bold">
           {title}
         </Typography>
         <Button
@@ -367,6 +369,9 @@ const Home = () => {
   const [popularProducts, setPopularProducts] = useState([]);
   const [favorites, setFavorites] = useState({});
   const [loading, setLoading] = useState(true);
+  const [categories, setCategories] = useState([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(true);
+  const [categoriesError, setCategoriesError] = useState(null);
 
   // Set page title
   useEffect(() => {
@@ -465,6 +470,21 @@ const Home = () => {
     fetchProducts();
   }, []);
 
+  // Fetch categories for collections section
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await axios.get("http://localhost:5000/api/categories");
+        setCategories(response.data);
+      } catch (err) {
+        setCategoriesError("Failed to load categories.");
+      } finally {
+        setCategoriesLoading(false);
+      }
+    };
+    fetchCategories();
+  }, []);
+
   // Add to cart handler.
   const handleAddToCart = async (productId) => {
     if (!user) {
@@ -528,14 +548,83 @@ const Home = () => {
               onAddToCart={handleAddToCart}
               onViewAll={() => navigate("/shop")}
             />
-            <ProductSection
-              title="Most Popular"
-              products={popularProducts}
-              favorites={favorites}
-              onFavoriteToggle={handleFavoriteToggle}
-              onAddToCart={handleAddToCart}
-              onViewAll={() => navigate("/shop")}
-            />
+            {/* Collections Section */}
+            <Box my={6}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
+                <Typography variant="h4" fontWeight="bold" textAlign="center">
+                  Explore Collections
+                </Typography>
+                <Button
+                  variant="outlined"
+                  color="primary"
+                  endIcon={<ArrowRight />}
+                  onClick={() => navigate('/collections')}
+                  sx={{ ml: 2, minWidth: 120 }}
+                >
+                  View All
+                </Button>
+              </Box>
+              {categoriesLoading ? (
+                <Box sx={{ textAlign: 'center', mt: 4 }}>
+                  <CircularProgress />
+                  <Typography>Loading Collections...</Typography>
+                </Box>
+              ) : categoriesError ? (
+                <Typography color="error" textAlign="center">{categoriesError}</Typography>
+              ) : (
+                <Grid container spacing={4}>
+                  {categories.slice(0, 6).map((category) => (
+                    <Grid item xs={12} sm={6} md={4} key={category._id}>
+                      <Card
+                        elevation={1}
+                        sx={{
+                          height: '100%',
+                          minHeight: 100,
+                          display: 'flex',
+                          flexDirection: 'column',
+                          transition: 'box-shadow 0.2s ease-in-out',
+                          '&:hover': {
+                            boxShadow: 4,
+                            cursor: 'pointer'
+                          },
+                          borderRadius: 2,
+                          overflow: 'hidden',
+                        }}
+                        onClick={() => navigate(`/shop?category=${category.name}`)}
+                      >
+                        <CardMedia
+                          component="img"
+                          height="220"
+                          image={category.image || 'https://via.placeholder.com/400x250?text=No+Image'}
+                          alt={category.name}
+                          sx={{ objectFit: 'cover' }}
+                        />
+                        <CardContent sx={{ flexGrow: 1, p: 3 }}>
+                          <Typography variant="h6" gutterBottom fontWeight="bold">
+                            {category.name}
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                            {category.description}
+                          </Typography>
+                          <Button
+                            variant="outlined"
+                            color="primary"
+                            endIcon={<ArrowRight size={20} />}
+                            onClick={e => {
+                              e.stopPropagation();
+                              navigate(`/shop?category=${category.name}`);
+                            }}
+                            sx={{ mt: 'auto' }}
+                          >
+                            View Products
+                          </Button>
+                        </CardContent>
+                      </Card>
+                    </Grid>
+                  ))}
+                </Grid>
+              )}
+            </Box>
           </Box>
         </Fade>
       )}

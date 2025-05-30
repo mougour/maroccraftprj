@@ -37,14 +37,22 @@ const userSchema = new mongoose.Schema({
     type: String,
   },
   // Extra artisan-related fields
-  specialty: {
+  specialties: [{
     type: String,
+  }],
+  coverImage: {
+    type: String,
+    default: './default-cover.png',
   },
   rating: {
     type: Number,
     default: 0,
   },
-  reviews: {
+  reviewCount: {
+    type: Number,
+    default: 0,
+  },
+  orderCount: {
     type: Number,
     default: 0,
   },
@@ -108,6 +116,11 @@ const validateData = (data) => {
       is: 'artisan',
       then: Joi.string().required().label("Description"),
       otherwise: Joi.string().optional().allow(''),
+    }),
+    specialties: Joi.when('role', {
+      is: 'artisan',
+      then: Joi.array().items(Joi.string()).min(1).required().label("Specialties"),
+      otherwise: Joi.array().items(Joi.string()).optional().allow(null),
     }),
   });
   return schema.validate(data);

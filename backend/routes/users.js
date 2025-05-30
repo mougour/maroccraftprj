@@ -2,6 +2,8 @@ import express from "express";
 import User from "../models/user.js";
 import Order from "../models/order.js"; 
 import ArtisanReview from "../models/artisanReview.js";
+import Product from "../models/product.js";
+import mongoose from "mongoose";
 const usersRouter = express.Router();
 
 usersRouter.get("/", async (req, res) => {
@@ -25,6 +27,7 @@ usersRouter.get("/:id", async (req, res) => {
 
 usersRouter.put("/:id", async (req, res) => {
   try {
+    console.log('Update user request body:', req.body);
     const updatedUser = await User.findByIdAndUpdate(req.params.id, req.body, {
       new: true,
       runValidators: true,
@@ -74,6 +77,34 @@ usersRouter.get("/stats/:id", async (req, res) => {
       totalSales: totalSales[0] ? totalSales[0].total : 0
     });
   } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+usersRouter.get("/artisans", async (req, res) => {
+  try {
+    const artisans = await User.find({ role: 'artisan' });
+    res.json({ artisans });
+  } catch (error) {
+    console.error('Error fetching artisans:', error.stack || error);
+    res.status(500).json({
+      error: 'Failed to fetch artisans due to server error',
+      details: error.message,
+    });
+  }
+});
+
+// Get user notifications
+usersRouter.get("/notifications/:id", async (req, res) => {
+  try {
+    const userId = req.params.id;
+    // TODO: Implement logic to fetch notifications for the user
+    // This might involve querying a Notification model or checking user-specific fields
+    const notifications = []; // Placeholder for fetched notifications
+
+    res.json(notifications);
+  } catch (error) {
+    console.error('Error fetching notifications:', error);
     res.status(500).json({ error: error.message });
   }
 });

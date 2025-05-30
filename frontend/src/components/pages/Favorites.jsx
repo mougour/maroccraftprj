@@ -17,7 +17,7 @@ import {
   Avatar,
   CircularProgress
 } from '@mui/material';
-import { Heart, ShoppingCart } from 'lucide-react';
+import { Heart, ShoppingCart, ArrowLeft } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import axios from 'axios';
@@ -107,16 +107,36 @@ const Favorites = () => {
   // Loading and Error states
   if (loading) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
-        <CircularProgress />
+      <Box display="flex" flexDirection="column" alignItems="flex-start" minHeight="60vh">
+        <Button
+          startIcon={<ArrowLeft />}
+          variant="text"
+          sx={{ mb: 2, mt: 2, ml: 2 }}
+          onClick={() => navigate(-1)}
+        >
+          Back
+        </Button>
+        <Box flex={1} display="flex" justifyContent="center" alignItems="center" width="100%">
+          <CircularProgress />
+        </Box>
       </Box>
     );
   }
 
   if (error) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
-        <Typography variant="h6" color="error">{error}</Typography>
+      <Box display="flex" flexDirection="column" alignItems="flex-start" minHeight="60vh">
+        <Button
+          startIcon={<ArrowLeft />}
+          variant="text"
+          sx={{ mb: 2, mt: 2, ml: 2 }}
+          onClick={() => navigate(-1)}
+        >
+          Back
+        </Button>
+        <Box flex={1} display="flex" justifyContent="center" alignItems="center" width="100%">
+          <Typography variant="h6" color="error">{error}</Typography>
+        </Box>
       </Box>
     );
   }
@@ -256,7 +276,15 @@ const Favorites = () => {
   };
 
   return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
+    <Container maxWidth="lg" sx={{ py: 6 }}>
+      <Button
+        startIcon={<ArrowLeft />}
+        variant="text"
+        sx={{ mb: 2, mt: 1 }}
+        onClick={() => navigate(-1)}
+      >
+        Back
+      </Button>
       <Box sx={{ mb: 4 }}>
         <Typography variant="h3" gutterBottom fontWeight="bold" color="text.primary">
           My Favorites

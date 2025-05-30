@@ -19,7 +19,27 @@ import {
   ToggleButton,
   Collapse,
   Avatar,
+  Chip,
 } from '@mui/material';
+
+// --- Specialties list from Artisans component ---
+const specialties = [
+  'Zellige Crafting',
+  'Tadelakt Plastering',
+  'Wood Carving',
+  'Leatherwork',
+  'Metalwork',
+  'Pottery & Ceramics',
+  'Textile Weaving',
+  'Jewelry Making',
+  'Traditional Clothing Tailoring',
+  'Basket Weaving',
+  'Carpet & Rug Making',
+  'Painting & Calligraphy',
+  'Natural Cosmetics & Soap',
+  'Traditional Musical Instruments',
+  'Glass & Mirror Decoration',
+];
 
 // --- Logo Component ---
 const Logo = () => (
@@ -57,6 +77,7 @@ export default function RegisterForm() {
     phone: '',
     address: '',
     description: '',
+    specialties: [],
   });
   const [loading, setLoading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState('/default.png');
@@ -161,6 +182,15 @@ export default function RegisterForm() {
     }
   };
 
+  // Handle specialties selection
+  const handleSpecialtiesChange = (event) => {
+    const { value } = event.target;
+    setFormData((prev) => ({
+      ...prev,
+      specialties: typeof value === 'string' ? value.split(',') : value,
+    }));
+  };
+
   // Handle profile picture upload
   const handleProfilePictureChange = (e) => {
     const file = e.target.files[0];
@@ -209,8 +239,8 @@ export default function RegisterForm() {
 
     // Additional validation for artisans
     if (formData.role === 'artisan') {
-      if (!formData.phone || !formData.address || !formData.description) {
-        toast.error('Please fill in all artisan-specific fields');
+      if (!formData.phone || !formData.address || !formData.description || formData.specialties.length === 0) {
+        toast.error('Please fill in all artisan-specific fields, including specialties');
         return;
       }
     }
@@ -232,6 +262,7 @@ export default function RegisterForm() {
         requestData.phone = formData.phone.trim();
         requestData.address = formData.address.trim();
         requestData.description = formData.description.trim();
+        requestData.specialties = formData.specialties;
       }
 
       // Log the request data
@@ -489,6 +520,40 @@ export default function RegisterForm() {
                 ),
               }}
             />
+
+            {/* Specialties Multi-Select */}
+            <FormControl fullWidth margin="normal" variant="outlined" sx={textFieldStyles}>
+              <InputLabel id="specialties-label">Specialties</InputLabel>
+              <Select
+                labelId="specialties-label"
+                id="specialties"
+                multiple
+                name="specialties"
+                value={formData.specialties}
+                onChange={handleSpecialtiesChange}
+                renderValue={(selected) => (
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                    {selected.map((value) => (
+                      <Chip key={value} label={value} size="small" />
+                    ))}
+                  </Box>
+                )}
+                MenuProps={{
+                  PaperProps: {
+                    style: {
+                      maxHeight: 200,
+                    },
+                  },
+                }}
+              >
+                {specialties.map((specialty) => (
+                  <MenuItem key={specialty} value={specialty}>
+                    {specialty}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+
           </Collapse>
 
           {/* Submit Button */}

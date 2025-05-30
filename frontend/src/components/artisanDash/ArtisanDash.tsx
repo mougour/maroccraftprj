@@ -38,7 +38,7 @@ const Dashboard = () => {
     const fetchStats = async () => {
       try {
         const response = await axios.get(
-          `http://http://localhost:5000/api/users/stats/${user._id}`
+          `http://localhost:5000/api/users/stats/${user._id}`
         );
         setStats(response.data);
       } catch (error) {

@@ -7,6 +7,9 @@ import multer from "multer";
 import { CloudinaryStorage } from "multer-storage-cloudinary";
 import cloudinary from "../cloudinaryConfig.js";
 import transporter from "../config/email.js";
+import Message from "../models/message.js";
+import Order from "../models/order.js";
+import ArtisanReview from "../models/artisanReview.js";
 
 dotenv.config(); // Load .env variables
 
@@ -21,6 +24,25 @@ const storage = new CloudinaryStorage({
   },
 });
 const upload = multer({ storage });
+
+// Add a Multer error handling middleware for profile pictures
+const profileUploadErrorHandler = (req, res, next) => {
+  upload.single("image")(req, res, (err) => {
+    if (err instanceof multer.MulterError) {
+      // A Multer error occurred when uploading.
+      console.error('Profile Picture Multer Error:', err.message); // Log Multer specific error
+      console.error('Profile Picture Multer Error Code:', err.code); // Log Multer error code
+      return res.status(400).json({ error: `Profile picture upload error: ${err.message}` });
+    } else if (err) {
+      // An unknown error occurred when uploading.
+      console.error('Unknown Profile Picture Upload Error:', err.message); // Log other upload errors
+      console.error('Unknown Profile Picture Upload Error Stack:', err.stack); // Log stack trace
+      return res.status(500).json({ error: `Profile picture upload failed: ${err.message}` });
+    }
+    // Everything went fine
+    next();
+  });
+};
 
 // ------------------
 // Route: Verify Email (GET)
@@ -58,10 +80,12 @@ userRouter.get("/verify-email/:token", async (req, res) => {
 // ------------------
 // Route: Upload Profile Picture (POST)
 // ------------------
-userRouter.post("/upload", upload.single("image"), async (req, res) => {
+userRouter.post("/upload", profileUploadErrorHandler, async (req, res) => {
   if (!req.file) {
+    console.error('No file received in profile picture upload.'); // Add logging
     return res.status(400).json({ error: "No file uploaded" });
   }
+  console.log('Profile picture uploaded successfully:', req.file.path); // Add logging
   res.json({ imageUrl: req.file.path });
 });
 
@@ -287,6 +311,44 @@ userRouter.put("/:id", upload.single("profilePicture"), async (req, res) => {
   } catch (error) {
     console.error("User update error:", error);
     return res.status(500).json({ error: error.message });
+  }
+});
+
+// Notifications endpoint for artisan
+userRouter.get("/notifications/:userId", async (req, res) => {
+  try {
+    const userId = req.params.userId;
+    // Unread messages: messages where receiver is userId and not marked as read
+    const unreadMessages = await Message.countDocuments({ receiver: userId, read: { $ne: true } });
+    const latestMessages = await Message.find({ receiver: userId, read: { $ne: true } })
+      .sort({ sentAt: -1 }).limit(5).populate('sender', 'name email profilePicture');
+
+    // New orders: orders where at least one product's artisan is userId and status is 'pending'
+    const newOrders = await Order.countDocuments({
+      'products.productId': { $exists: true },
+      status: 'pending',
+      // You may need to adjust this if you store artisan/user on the product
+    });
+    const latestOrders = await Order.find({
+      'products.productId': { $exists: true },
+      status: 'pending',
+    }).sort({ orderDate: -1 }).limit(5);
+
+    // New reviews: reviews for this artisan not yet seen (assuming a 'seen' field)
+    const newReviews = await ArtisanReview.countDocuments({ artisanId: userId, seen: { $ne: true } });
+    const latestReviews = await ArtisanReview.find({ artisanId: userId, seen: { $ne: true } })
+      .sort({ createdAt: -1 }).limit(5);
+
+    res.json({
+      unreadMessages,
+      newOrders,
+      newReviews,
+      latestMessages,
+      latestOrders,
+      latestReviews
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
 });
 

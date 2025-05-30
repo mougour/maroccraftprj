@@ -11,6 +11,8 @@ const CustomerOrderDetail = () => {
   const [error, setError] = useState(null);
   const navigate = useNavigate();
 
+  const user = JSON.parse(localStorage.getItem('user') || sessionStorage.getItem('user') || '{}');
+
   useEffect(() => {
     const fetchOrderDetail = async () => {
       try {

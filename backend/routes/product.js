@@ -16,7 +16,31 @@ const storage = new CloudinaryStorage({
     allowed_formats: ["jpg", "png", "jpeg", "webp"],
   },
 });
-const upload = multer({ storage });
+
+// Setup Multer memory storage for parsing body without saving files (temporary)
+// const memoryStorage = multer.memoryStorage(); // Remove this line
+
+const upload = multer({ storage }); // Original Cloudinary upload
+// const uploadMemory = multer({ storage: memoryStorage }); // Temporary: use memory storage for body parsing - remove this line
+
+// Add a Multer error handling middleware
+const uploadErrorHandler = (req, res, next) => {
+  upload.array("images", 5)(req, res, (err) => {
+    if (err instanceof multer.MulterError) {
+      // A Multer error occurred when uploading.
+      console.error('Multer Error:', err.message); // Log Multer specific error
+      console.error('Multer Error Code:', err.code); // Log Multer error code
+      return res.status(400).json({ error: `Multer error: ${err.message}` });
+    } else if (err) {
+      // An unknown error occurred when uploading.
+      console.error('Unknown Upload Error:', err.message); // Log other upload errors
+      console.error('Unknown Upload Error Stack:', err.stack); // Log stack trace
+      return res.status(500).json({ error: `Upload failed: ${err.message}` });
+    }
+    // Everything went fine
+    next();
+  });
+};
 
 // GET all products and calculate average rating for each product (simple approach)
 productRouter.get("/", async (req, res) => {
@@ -62,19 +86,23 @@ productRouter.get("/:id", async (req, res) => {
 });
 
 // CREATE a new product with multiple image uploads
-productRouter.post("/", verifyToken, upload.array("images", 5), async (req, res) => {
+productRouter.post("/", verifyToken, uploadErrorHandler, async (req, res) => { // Use the new error handler here
   try {
     const { name, category, price, user, description, countInStock } = req.body;
 
-    // console.log(req.body);
+    console.log('Product creation request body (after upload):', req.body); // Updated logging
+    console.log('Uploaded files (after upload):', req.files); // Updated logging
+
     if (!name || !category || !price || !user) {
+      console.error('Missing required fields for product creation');
       return res.status(400).json({ error: "Missing required fields" });
     }
 
-    const imageUrls = req.files.map(file => file.path);
-// console.log(imageUrls)
+    // Ensure req.files is treated as an array even if no files were uploaded
+    const imageUrls = Array.isArray(req.files) ? req.files.map(file => file.path) : []; // Safer mapping
 
-console.log('pre-save db')
+    console.log('Generated image URLs:', imageUrls); // Restore original logging
+
     // Set default rating to 0 (will be calculated from reviews)
     const product = new Product({
       name,
@@ -84,17 +112,33 @@ console.log('pre-save db')
       images: imageUrls.length > 0 ? imageUrls : ["https://via.placeholder.com/150"],
       description: description || "No description provided",
       countInStock: countInStock || 0,
-      rating: 1,
+      rating: 0,
       tags: req.body.tags ? req.body.tags.split(",") : [],
     });
 
+    console.log('Product object before saving:', product); // Restore original logging
+
     await product.save();
 
-    console.log('post-save db')
+    console.log('Product saved successfully:', product); // Restore original logging
 
     res.status(201).json(product);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    // This catch block handles errors *after* successful upload/body parsing
+    console.error("Error adding product (during save or later):", error.message); // Updated logging
+    console.error("Error stack (during save or later):", error.stack); // Updated logging
+
+    // Check for Mongoose validation errors
+    if (error.name === 'ValidationError') {
+      console.error('Mongoose Validation Error Details (during save or later):'); // Updated logging
+      for (const field in error.errors) {
+        console.error(`${field}: ${error.errors[field].message}`);
+      }
+      res.status(400).json({ error: error.message, validationErrors: error.errors });
+    } else {
+      // Handle other types of errors
+      res.status(500).json({ error: error.message });
+    }
   }
 });
 

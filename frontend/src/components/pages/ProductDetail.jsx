@@ -432,7 +432,7 @@ const ProductDetail = () => {
                 </IconButton>
               </Box>
               <Typography variant="body2" color="text.secondary">
-                {product.maxQuantity || 0} items available
+                {typeof product.countInStock === 'number' ? product.countInStock : 0} items available
               </Typography>
             </Box>
 
