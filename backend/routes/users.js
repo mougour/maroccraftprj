@@ -6,6 +6,71 @@ import Product from "../models/product.js";
 import mongoose from "mongoose";
 const usersRouter = express.Router();
 
+// Search artisans
+usersRouter.get("/search", async (req, res) => {
+  try {
+    const { q, role } = req.query;
+    if (!q) {
+      return res.json([]);
+    }
+
+    const searchQuery = {
+      role: role || 'artisan',
+      $or: [
+        { name: { $regex: q, $options: 'i' } },
+        { bio: { $regex: q, $options: 'i' } },
+        { specialties: { $regex: q, $options: 'i' } },
+        { address: { $regex: q, $options: 'i' } }
+      ]
+    };
+
+    const artisans = await User.find(searchQuery)
+      .select('-password -email -phone -role -createdAt -updatedAt')
+      .lean();
+
+    if (!artisans) {
+      return res.json([]);
+    }
+
+    // Get additional stats for each artisan
+    const artisansWithStats = await Promise.all(
+      artisans.map(async (artisan) => {
+        try {
+          const stats = await User.findById(artisan._id).select('stats').lean();
+          return {
+            ...artisan,
+            stats: stats?.stats || {
+              totalSales: 0,
+              completedOrders: 0,
+              averageRating: 0,
+              productCount: 0
+            }
+          };
+        } catch (error) {
+          console.error(`Error fetching stats for artisan ${artisan._id}:`, error);
+          return {
+            ...artisan,
+            stats: {
+              totalSales: 0,
+              completedOrders: 0,
+              averageRating: 0,
+              productCount: 0
+            }
+          };
+        }
+      })
+    );
+
+    res.json(artisansWithStats);
+  } catch (error) {
+    console.error('Error searching artisans:', error);
+    res.status(500).json({ 
+      error: 'Failed to search artisans',
+      details: error.message 
+    });
+  }
+});
+
 usersRouter.get("/", async (req, res) => {
   try {
     const users = await User.find();

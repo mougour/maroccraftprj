@@ -61,6 +61,7 @@ const Navbar = () => {
   const navigate = useNavigate();
   const { user, isAuthenticated } = useUserAuth();
   const [countCart, setCountCart] = useState(0);
+  const [countFavorites, setCountFavorites] = useState(0);
   const [notifications, setNotifications] = useState(null);
   const [loadingNotifications, setLoadingNotifications] = useState(false);
 
@@ -93,9 +94,23 @@ const Navbar = () => {
     }
   };
 
+  const fetchCountFavorites = async () => {
+    try {
+      if (user && user._id) {
+        const response = await axios.get(`http://localhost:5000/api/favorites/user/${user._id}/count`);
+        if (response.data && response.data.success) {
+          setCountFavorites(response.data.count);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching favorites count:', error);
+    }
+  };
+
   useEffect(() => {
     if (isAuthenticated && user && user._id) {
       fetchCountCart();
+      fetchCountFavorites();
     }
   }, [isAuthenticated, user]);
 
@@ -111,15 +126,38 @@ const Navbar = () => {
     }
   }, [isAuthenticated, user]);
 
+  // Add event listeners for cart and favorites updates
+  useEffect(() => {
+    const handleCartUpdate = () => {
+      fetchCountCart();
+    };
+
+    const handleFavoritesUpdate = () => {
+      fetchCountFavorites();
+    };
+
+    // Listen for custom events
+    window.addEventListener('cartUpdated', handleCartUpdate);
+    window.addEventListener('favoritesUpdated', handleFavoritesUpdate);
+
+    // Cleanup listeners
+    return () => {
+      window.removeEventListener('cartUpdated', handleCartUpdate);
+      window.removeEventListener('favoritesUpdated', handleFavoritesUpdate);
+    };
+  }, [user]);
+
   const handleLogout = () => {
     handleProfileClose();
     // Perform additional logout logic if needed.
   };
 
-  // NEW: Search handling. Navigates to /shop with the search query.
+  // Search handling. Navigates to /search with the search query.
   const handleSearch = () => {
     if (searchQuery.trim() !== '') {
-      navigate(`/shop?search=${encodeURIComponent(searchQuery)}`);
+      navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+      setSearchOpen(false); // Close mobile search drawer
+      setSearchQuery(''); // Clear search query after navigation
     }
   };
 
@@ -284,7 +322,7 @@ const Navbar = () => {
                     padding: { xs: '6px', sm: '8px' },
                   }}
                 >
-                  <Badge badgeContent={0} color="error">
+                  <Badge badgeContent={countFavorites} color="error">
                     <Heart size={20} />
                   </Badge>
                 </IconButton>
@@ -296,7 +334,9 @@ const Navbar = () => {
                     padding: { xs: '6px', sm: '8px' },
                   }}
                 >
-                  <ShoppingCart size={20} />
+                  <Badge badgeContent={countCart} color="error">
+                    <ShoppingCart size={20} />
+                  </Badge>
                 </IconButton>
 
                 {/* Notifications */}

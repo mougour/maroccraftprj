@@ -89,4 +89,16 @@ reviewRouter.get("/artisan/:artisanId/products", async (req, res) => {
     }
 });
 
+// New route to get the count of reviews left by a user
+reviewRouter.get("/user/:id/count", async (req, res) => {
+  try {
+    const userId = req.params.id;
+    const reviewCount = await Review.countDocuments({ customerId: userId });
+    res.json({ success: true, count: reviewCount });
+  } catch (error) {
+    console.error("Error fetching review count:", error);
+    res.status(500).json({ success: false, error: "Failed to fetch review count." });
+  }
+});
+
 export default reviewRouter;

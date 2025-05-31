@@ -184,7 +184,14 @@ const Profile = () => {
       setPassword('');
       setMessage('');
     }
-    navigate('/artisan-dashboard');
+    // Redirect based on user role
+    if (user?.role === 'artisan') {
+      navigate('/artisan-dashboard');
+    } else if (user?.role === 'customer') {
+      navigate('/customer-dash');
+    } else {
+      navigate('/');
+    }
   };
 
   // Trigger hidden file input for picture update
@@ -273,7 +280,7 @@ const Profile = () => {
             </p>
             <div className="mt-2 flex items-center space-x-2">
               <span className="px-3 py-1 bg-[#FFF8E7] text-[#FFB636] rounded-full text-sm font-medium">
-                {user?.role === 'artisan' ? 'Artisan' : user?.role === 'costumer' ? 'Customer' : 'User'}
+                {user?.role === 'artisan' ? 'Artisan' : user?.role === 'customer' ? 'Customer' : 'User'}
               </span>
             </div>
           </div>

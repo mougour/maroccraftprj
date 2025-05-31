@@ -100,10 +100,47 @@ const Products = () => {
       setSelectedCategories(["All Categories"]);
     }
 
+    // Fetch products when search query or category changes
+    fetchProducts();
   }, [location.search]); // Depend on location.search to re-run when URL changes
 
   const user = JSON.parse(sessionStorage.getItem("user"));
   const token = sessionStorage.getItem("token");
+
+  // Add to cart function
+  const addToCart = async (product) => {
+    if (!user || !token) {
+      toast.error('You must be logged in to add items to cart.');
+      return;
+    }
+    try {
+      const response = await axios.post(
+        'http://localhost:5000/api/cart',
+        {
+          customerId: user._id,
+          products: [{ productId: product._id, quantity: 1 }],
+          totalAmount: product.price
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      toast.success(`Added "${product.name}" to cart!`);
+      // Dispatch event for cart update
+      window.dispatchEvent(new Event('cartUpdated'));
+    } catch (error) {
+      console.error('Error adding to cart:', error);
+      toast.error('Error adding to cart. Please try again.');
+    }
+  };
+
+  // Update handleAddToCart to use the new addToCart function
+  const handleAddToCart = async (productId) => {
+    const product = products.find((p) => p.id === productId);
+    if (!product) {
+      toast.error("Product not found.");
+      return;
+    }
+    await addToCart(product);
+  };
 
   // Toggle favorite for a product.
   const handleFavoriteToggle = async (productId) => {
@@ -127,6 +164,8 @@ const Products = () => {
               : p
           )
         );
+        // Dispatch event for favorites update
+        window.dispatchEvent(new Event('favoritesUpdated'));
       } else {
         await axios.delete(
           `http://localhost:5000/api/favorites/${product.favoriteId}`,
@@ -140,34 +179,12 @@ const Products = () => {
               : p
           )
         );
+        // Dispatch event for favorites update
+        window.dispatchEvent(new Event('favoritesUpdated'));
       }
     } catch (error) {
       console.error("Error toggling favorite:", error);
       toast.error("Error updating favorites. Please try again.");
-    }
-  };
-
-  // Add product to cart.
-  const handleAddToCart = async (productId) => {
-    if (!user) {
-      toast.error("You must be logged in to add products to your cart.");
-      return;
-    }
-    const product = products.find((p) => p.id === productId);
-    const payload = {
-      customerId: user._id,
-      products: [{ productId, quantity: 1 }],
-      totalAmount: product.price,
-    };
-
-    try {
-      await axios.post("http://localhost:5000/api/cart", payload, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      toast.success("Added to cart successfully!");
-    } catch (error) {
-      console.error("Error adding to cart:", error);
-      toast.error("Error adding to cart. Please try again.");
     }
   };
 
@@ -249,10 +266,6 @@ const Products = () => {
       setLoading(false);
     }
   };
-
-  useEffect(() => {
-    fetchProducts();
-  }, []);
 
   // Filtering UI (Sidebar/Drawer)
   const FilterContent = () => (
@@ -542,7 +555,8 @@ const Products = () => {
     const searchMatch =
       searchQuery.trim() === "" ||
       product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      product.tags.join(" ").toLowerCase().includes(searchQuery.toLowerCase());
+      product.tags.join(" ").toLowerCase().includes(searchQuery.toLowerCase()) ||
+      product.category?.toLowerCase().includes(searchQuery.toLowerCase());
     return withinPrice && categoryMatch && searchMatch;
   });
 

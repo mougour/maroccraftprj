@@ -42,6 +42,42 @@ const uploadErrorHandler = (req, res, next) => {
   });
 };
 
+// Search products - Move this BEFORE the /:id route
+productRouter.get("/search", async (req, res) => {
+  try {
+    const { q } = req.query;
+    if (!q) {
+      return res.json([]);
+    }
+
+    const searchQuery = {
+      $or: [
+        { name: { $regex: q, $options: 'i' } },
+        { description: { $regex: q, $options: 'i' } },
+        { tags: { $regex: q, $options: 'i' } },
+        { 'category.name': { $regex: q, $options: 'i' } }
+      ]
+    };
+
+    const products = await Product.find(searchQuery)
+      .populate('user', 'name profilePicture address')
+      .populate('category', 'name')
+      .lean();
+
+    if (!products) {
+      return res.json([]);
+    }
+
+    res.json(products);
+  } catch (error) {
+    console.error('Error searching products:', error);
+    res.status(500).json({ 
+      error: 'Failed to search products',
+      details: error.message 
+    });
+  }
+});
+
 // GET all products and calculate average rating for each product (simple approach)
 productRouter.get("/", async (req, res) => {
   try {

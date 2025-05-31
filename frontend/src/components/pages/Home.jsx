@@ -410,28 +410,9 @@ const Home = () => {
       toast.error("You must be logged in to favorite products.");
       return;
     }
-    const isCurrentlyFav = !!favorites[productId]?.isFavorite;
-    if (isCurrentlyFav) {
-      try {
-        const favoriteId = favorites[productId].favoriteId;
-        await axios.delete(
-          `http://localhost:5000/api/favorites/${favoriteId}`,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
-        toast.success("Removed from favorites");
-        setFavorites((prev) => {
-          const updated = { ...prev };
-          delete updated[productId];
-          return updated;
-        });
-      } catch (error) {
-        console.error("Error removing favorite:", error);
-        toast.error("Error removing favorite. Please try again.");
-      }
-    } else {
-      try {
+    try {
+      const product = latestProducts.find((p) => p._id === productId);
+      if (!product.isFavorite) {
         const response = await axios.post(
           `http://localhost:5000/api/favorites`,
           { product: productId },
@@ -442,10 +423,25 @@ const Home = () => {
           ...prev,
           [productId]: { favoriteId: response.data._id, isFavorite: true },
         }));
-      } catch (error) {
-        console.error("Error adding favorite:", error);
-        toast.error("Error adding to favorites. Please try again.");
+        // Dispatch event for favorites update
+        window.dispatchEvent(new Event('favoritesUpdated'));
+      } else {
+        await axios.delete(
+          `http://localhost:5000/api/favorites/${product.favoriteId}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        toast.success("Removed from favorites");
+        setFavorites((prev) => {
+          const updated = { ...prev };
+          delete updated[productId];
+          return updated;
+        });
+        // Dispatch event for favorites update
+        window.dispatchEvent(new Event('favoritesUpdated'));
       }
+    } catch (error) {
+      console.error("Error toggling favorite:", error);
+      toast.error("Error updating favorites. Please try again.");
     }
   };
 
@@ -488,22 +484,27 @@ const Home = () => {
   // Add to cart handler.
   const handleAddToCart = async (productId) => {
     if (!user) {
-      toast.error("You must be logged in to add products to your cart.");
+      toast.error("You must be logged in to add items to cart.");
       return;
     }
-    const product = latestProducts.find((p) => p._id === productId);
-    if (!product) return;
-    const payload = {
-      customerId: user._id,
-      products: [{ productId, quantity: 1 }],
-      totalAmount: product.price,
-    };
-
     try {
-      await axios.post("http://localhost:5000/api/cart", payload, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      toast.success("Added to cart successfully!");
+      const product = latestProducts.find((p) => p._id === productId);
+      if (!product) {
+        toast.error("Product not found.");
+        return;
+      }
+      const response = await axios.post(
+        "http://localhost:5000/api/cart",
+        {
+          customerId: user._id,
+          products: [{ productId, quantity: 1 }],
+          totalAmount: product.price
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      toast.success("Added to cart");
+      // Dispatch event for cart update
+      window.dispatchEvent(new Event('cartUpdated'));
     } catch (error) {
       console.error("Error adding to cart:", error);
       toast.error("Error adding to cart. Please try again.");

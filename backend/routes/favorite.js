@@ -55,4 +55,16 @@ favoriteRouter.delete("/:id", verifyToken, async (req, res) => {
     }
 });
 
+// New route to get the count of favorites for a user
+favoriteRouter.get("/user/:id/count", async (req, res) => {
+  try {
+    const userId = req.params.id;
+    const favoriteCount = await Favorite.countDocuments({ user: userId });
+    res.json({ success: true, count: favoriteCount });
+  } catch (error) {
+    console.error("Error fetching favorite count:", error);
+    res.status(500).json({ success: false, error: "Failed to fetch favorite count." });
+  }
+});
+
 export default favoriteRouter;

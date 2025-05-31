@@ -2,6 +2,7 @@ import express from "express";
 import { body, validationResult } from "express-validator";
 import Order from "../models/order.js";
 import Product from "../models/product.js";
+import mongoose from "mongoose";
 
 const orderRouter = express.Router();
 
@@ -206,6 +207,28 @@ orderRouter.get("/artisan/:userId", async (req, res) => {
   } catch (error) {
     console.error("Error fetching artisan orders:", error);
     res.status(500).json({ success: false, error: "Failed to fetch artisan orders." });
+  }
+});
+
+// New route to get customer order statistics
+orderRouter.get("/user/:id/stats", async (req, res) => {
+  try {
+    const customerId = req.params.id;
+
+    // Count total orders for the customer
+    const totalOrders = await Order.countDocuments({ customerId: customerId });
+
+    // Calculate total amount spent by the customer
+    const totalSpentResult = await Order.aggregate([
+      { $match: { customerId: new mongoose.Types.ObjectId(customerId) } },
+      { $group: { _id: null, total: { $sum: "$totalAmount" } } }
+    ]);
+    const totalSpent = totalSpentResult[0] ? totalSpentResult[0].total : 0;
+
+    res.json({ success: true, totalOrders, totalSpent });
+  } catch (error) {
+    console.error("Error fetching customer order stats:", error);
+    res.status(500).json({ success: false, error: "Failed to fetch customer order stats." });
   }
 });
 

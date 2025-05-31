@@ -44,6 +44,7 @@ import AddProduct from "./components/artisanDash/AddProduct";
 import EditProduct from "./components/artisanDash/EditProduct";
 import CustomerOrderDetail from "./components/pages/CustomerOrderDetail";
 import Messages from './components/pages/Messages';
+import SearchResults from './components/pages/SearchResults';
 
 /** Private Route Check */
 function PrivateRoute({ children }) {
@@ -147,6 +148,7 @@ function AppContent() {
       <Route path="/artisans" element={<NavbarLayout><Artisans /></NavbarLayout>} />
       <Route path="/cart" element={<NavbarLayout><Cart /></NavbarLayout>} />
       <Route path="/order-confirmation" element={<NavbarLayout><OrderConfirmation /></NavbarLayout>} />
+      <Route path="/search" element={<NavbarLayout><SearchResults /></NavbarLayout>} />
       <Route path="/favorites" element={<UserDashboardLayout><Favorites /></UserDashboardLayout>} />
       <Route 
         path="/orders" 

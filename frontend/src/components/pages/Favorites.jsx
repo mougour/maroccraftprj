@@ -85,6 +85,8 @@ const Favorites = () => {
       
       if (response.data) {
         toast.success('Removed from favorites', { id: favoriteId });
+        // Dispatch event for favorites update
+        window.dispatchEvent(new Event('favoritesUpdated'));
       } else {
         toast.error(response.data.error || 'Favorite not found.', { id: favoriteId });
         fetchFavorites();
@@ -98,8 +100,28 @@ const Favorites = () => {
   
 
   // Add to cart (placeholder logic)
-  const addToCart = (product) => {
-    toast.success(`Added "${product.name}" to cart!`);
+  const addToCart = async (product) => {
+    if (!user || !token) {
+      toast.error('You must be logged in to add items to cart.');
+      return;
+    }
+    try {
+      const response = await axios.post(
+        'http://localhost:5000/api/cart',
+        {
+          customerId: user._id,
+          products: [{ productId: product._id, quantity: 1 }],
+          totalAmount: product.price
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      toast.success(`Added "${product.name}" to cart!`);
+      // Dispatch event for cart update
+      window.dispatchEvent(new Event('cartUpdated'));
+    } catch (error) {
+      console.error('Error adding to cart:', error);
+      toast.error('Error adding to cart. Please try again.');
+    }
   };
 
   const handleTabChange = (event, newValue) => setActiveTab(newValue);

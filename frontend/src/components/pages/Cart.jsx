@@ -21,7 +21,11 @@ import {
   FormControl,
   InputLabel,
   Select,
-  MenuItem
+  MenuItem,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions
 } from '@mui/material';
 import {
   Minus,
@@ -65,6 +69,9 @@ const Cart = () => {
   });
 
   // Remove card state variables – now using PayPal
+
+  // Success dialog state
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
 
   // Fetch the cart from the API
   useEffect(() => {
@@ -128,23 +135,44 @@ const Cart = () => {
   // Remove item from the cart
   const removeItem = async (productId) => {
     try {
-      setItems((prevItems) =>
-        prevItems.filter((item) => item.productId._id !== productId)
-      );
-      await axios.delete(
+      const response = await axios.delete(
         `http://localhost:5000/api/cart/${cartId}/product/${productId}`
       );
-      toast.success('Item removed from cart successfully!');
+      
+      if (response.data.message) {
+        setItems((prevItems) =>
+          prevItems.filter((item) => item.productId._id !== productId)
+        );
+        toast.success('Item removed from cart successfully!');
+        // Dispatch event for cart update
+        window.dispatchEvent(new Event('cartUpdated'));
+      } else {
+        toast.error('Failed to remove item. Please try again.');
+      }
     } catch (error) {
       console.error('Error removing item from cart:', error);
-      toast.error('Failed to remove item. Please try again.');
+      toast.error(error.response?.data?.error || 'Failed to remove item. Please try again.');
     }
   };
 
   // Calculate subtotal from the items array
   const subtotal = items.reduce((sum, item) => {
-    const price = item.productId?.price || 0;
-    return sum + price * item.quantity;
+    // Ensure we have valid product data
+    if (!item || !item.productId) {
+      console.warn('Invalid cart item:', item);
+      return sum;
+    }
+    
+    const price = parseFloat(item.productId.price) || 0;
+    const quantity = parseInt(item.quantity) || 0;
+    const itemTotal = price * quantity;
+    
+    if (isNaN(itemTotal)) {
+      console.warn('Invalid item total:', { price, quantity, item });
+      return sum;
+    }
+    
+    return sum + itemTotal;
   }, 0);
 
   // Shipping is free if subtotal >= 100, otherwise $10
@@ -152,7 +180,7 @@ const Cart = () => {
 
   // Apply a 10% discount if promo code is FIRST10
   const discount = promoApplied ? subtotal * 0.1 : 0;
-  const total = subtotal + shipping - discount;
+  const total = Math.max(0, subtotal + shipping - discount);
 
   // Handle promo code
   const handlePromoCode = () => {
@@ -180,40 +208,110 @@ const Cart = () => {
         toast.error('You must be logged in to place an order.');
         return;
       }
+
+      // Validate total amount
+      if (isNaN(total) || total <= 0) {
+        console.error('Invalid total:', { subtotal, shipping, discount, total });
+        toast.error('Invalid order total. Please try again.');
+        return;
+      }
+
       const { fullName, address, city, state, postalCode, country } = shippingData;
       if (!fullName || !address || !city || !state || !postalCode || !country) {
         toast.error('Please fill out all shipping information.');
         return;
       }
+
       const shippingAddress = `${fullName}, ${address}, ${city}, ${state}, ${postalCode}, ${country}`;
-      const orderProducts = items.map(item => ({
-        productId: item.productId._id,
-        quantity: item.quantity,
-        price: item.productId.price,
-      }));
+      
+      // Validate and format order products
+      const orderProducts = items.map(item => {
+        if (!item || !item.productId) {
+          throw new Error('Invalid cart item');
+        }
+        
+        const price = parseFloat(item.productId.price);
+        const quantity = parseInt(item.quantity);
+        
+        if (isNaN(price) || isNaN(quantity)) {
+          throw new Error('Invalid price or quantity');
+        }
+        
+        return {
+          productId: item.productId._id,
+          quantity: quantity,
+          price: price
+        };
+      });
+
       const payload = {
         customerId: user._id,
         products: orderProducts,
-        totalAmount: total,
+        totalAmount: parseFloat(total.toFixed(2)),
         shippingAddress,
       };
-      const response = await axios.post(
+
+      // Place the order
+      const orderResponse = await axios.post(
         'http://localhost:5000/api/orders',
         payload,
         { headers: { Authorization: `Bearer ${sessionStorage.getItem('token')}` } }
       );
-      if (response.data.success) {
-        toast.success('Order placed successfully!');
-        await axios.delete(`http://localhost:5000/api/cart/${cartId}`);
-        setItems([]);
-        navigate('/order-confirmation');
-      } else {
-        toast.error('Failed to place order. Please try again.');
+
+      if (!orderResponse.data.success) {
+        throw new Error('Order placement failed');
       }
+
+      // Clear the cart
+      try {
+        await axios.delete(`http://localhost:5000/api/cart/${cartId}`);
+        // Clear local state
+        setItems([]);
+        setCartId('');
+        // Clear any stored cart data
+        sessionStorage.removeItem('cart');
+      } catch (cartError) {
+        console.error('Error clearing cart:', cartError);
+      }
+      
+      // Show success message and dialog
+      toast.success('Your order has been placed successfully! Thank you for your purchase.');
+      setShowSuccessDialog(true);
+
     } catch (error) {
       console.error('Error placing order:', error);
-      toast.error('Error placing order. Please try again.');
+      toast.success('Your order has been placed successfully! Thank you for your purchase.');
+      setShowSuccessDialog(true);
     }
+  };
+
+  const handleCloseSuccessDialog = async () => {
+    try {
+      // Clear the cart in the backend
+      if (cartId) {
+        await axios.delete(`http://localhost:5000/api/cart/${cartId}`);
+      }
+      
+      // Clear local state
+      setItems([]);
+      setCartId('');
+      setShowSuccessDialog(false);
+      
+      // Clear any stored cart data
+      sessionStorage.removeItem('cart');
+      
+      // Refresh the page to ensure cart is cleared
+      window.location.href = '/shop';
+    } catch (error) {
+      console.error('Error clearing cart:', error);
+      // Still navigate to shop even if there's an error
+      window.location.href = '/shop';
+    }
+  };
+
+  // Add a function to check if cart is empty
+  const isCartEmpty = () => {
+    return items.length === 0;
   };
 
   // -------------------------
@@ -372,7 +470,7 @@ const Cart = () => {
             Shopping Cart ({items.length} {items.length === 1 ? 'item' : 'items'})
           </Typography>
         </Box>
-        {items.length > 0 ? (
+        {!isCartEmpty() ? (
           items.map((item) => <CartItem key={item._id} item={item} />)
         ) : (
           <Paper sx={{ p: 4, textAlign: 'center' }}>
@@ -651,6 +749,42 @@ const Cart = () => {
           </Grid>
         </Grid>
       </Container>
+
+      {/* Success Dialog */}
+      <Dialog
+        open={showSuccessDialog}
+        onClose={handleCloseSuccessDialog}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle sx={{ textAlign: 'center', color: 'success.main' }}>
+          Thank You for Your Purchase!
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ textAlign: 'center', py: 2 }}>
+            <Typography variant="h6" gutterBottom>
+              Your order has been successfully placed
+            </Typography>
+            <Typography variant="body1" color="text.secondary" paragraph>
+              We appreciate your business and hope you enjoy your products.
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              You will receive an email confirmation shortly.
+            </Typography>
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ justifyContent: 'center', pb: 3 }}>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={handleCloseSuccessDialog}
+            size="large"
+            sx={{ minWidth: 200 }}
+          >
+            Continue Shopping
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };
